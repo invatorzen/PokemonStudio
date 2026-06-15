@@ -14,7 +14,7 @@ const TitleContainer = styled.div`
   padding-top: 8px;
 
   & > h3 {
-    ${theme.fonts.titlesHeadline6};
+    ${({ theme }) => theme.fonts.titlesHeadline6};
     margin: 0;
     line-height: 22px;
     text-align: center;
@@ -25,8 +25,8 @@ const TextWarningContainer = styled.div`
   display: flex;
   flex-direction: column;
   align-items: center;
-  ${theme.fonts.normalMedium};
-  color: ${theme.colors.text400};
+  ${({ theme }) => theme.fonts.normalMedium};
+  color: ${({ theme }) => theme.colors.text400};
 
   & > p {
     margin: 0;
@@ -34,7 +34,7 @@ const TextWarningContainer = styled.div`
   }
 
   .red {
-    color: ${theme.colors.dangerBase};
+    color: ${({ theme }) => theme.colors.dangerBase};
   }
 `;
 
@@ -48,8 +48,8 @@ const ActionContainer = styled.div`
 `;
 
 const CancelLink = styled.span`
-  ${theme.fonts.normalMedium};
-  color: ${theme.colors.text400};
+  ${({ theme }) => theme.fonts.normalMedium};
+  color: ${({ theme }) => theme.colors.text400};
 
   :hover {
     cursor: pointer;

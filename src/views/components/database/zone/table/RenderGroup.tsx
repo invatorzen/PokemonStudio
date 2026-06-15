@@ -29,10 +29,10 @@ const RenderGroupContainer = styled(DataGroupGrid).attrs<RenderGroupContainerPro
   min-height: 40px;
   padding: 4px 4px 4px 8px;
   margin: 0 -4px 0 -8px;
-  box-shadow: ${({ isDragging }) => (isDragging ? `0 0 5px ${theme.colors.dark8}` : 'none')};
+  box-shadow: ${({ isDragging, theme }) => (isDragging ? `0 0 5px ${theme.colors.dark8}` : 'none')};
 
   & .drag-icon {
-    color: ${theme.colors.text700};
+    color: ${({ theme }) => theme.colors.text700};
     height: 18px;
 
     :hover {
@@ -46,7 +46,7 @@ const RenderGroupContainer = styled(DataGroupGrid).attrs<RenderGroupContainerPro
     gap: 4px;
 
     ${Code} {
-      color: ${theme.colors.text100};
+      color: ${({ theme }) => theme.colors.text100};
     }
   }
 
@@ -59,10 +59,10 @@ const RenderGroupContainer = styled(DataGroupGrid).attrs<RenderGroupContainerPro
   }
 
   & .error {
-    color: ${theme.colors.dangerBase};
+    color: ${({ theme }) => theme.colors.dangerBase};
 
     &:hover {
-      color: ${theme.colors.dangerBase};
+      color: ${({ theme }) => theme.colors.dangerBase};
     }
   }
 
@@ -73,25 +73,25 @@ const RenderGroupContainer = styled(DataGroupGrid).attrs<RenderGroupContainerPro
   }
 
   &[data-dragged] {
-    background-color: ${theme.colors.dark14};
-    color: ${theme.colors.text100};
+    background-color: ${({ theme }) => theme.colors.dark14};
+    color: ${({ theme }) => theme.colors.text100};
     border-radius: 8px;
   }
 
   ${EditButtonOnlyIconContainer} {
     display: ${({ groupDeleted }) => (groupDeleted ? 'none' : 'flex')};
-    background-color: ${theme.colors.primarySoft};
+    background-color: ${({ theme }) => theme.colors.primarySoft};
 
     &:hover {
-      background-color: ${theme.colors.secondaryHover};
+      background-color: ${({ theme }) => theme.colors.secondaryHover};
     }
 
     &:active {
-      background-color: ${theme.colors.primarySoft};
+      background-color: ${({ theme }) => theme.colors.primarySoft};
     }
   }
 
-  @media ${theme.breakpoints.dataBox422} {
+  @media ${({ theme }) => theme.breakpoints.dataBox422} {
     grid-template-columns: 18px 160px auto;
 
     & .environment {

@@ -33,14 +33,14 @@ const RenderGoalContainer = styled(DataGoalGrid).attrs<RenderGoalContainerProps>
   height: 40px;
   padding: 0 4px 0 8px;
   margin: 0 -4px 0 -8px;
-  box-shadow: ${({ isDragging }) => (isDragging ? `0 0 5px ${theme.colors.dark8}` : 'none')};
+  box-shadow: ${({ isDragging, theme }) => (isDragging ? `0 0 5px ${theme.colors.dark8}` : 'none')};
 
   & span {
     color: ${({ theme }) => theme.colors.text400};
   }
 
   & .drag {
-    color: ${theme.colors.text700};
+    color: ${({ theme }) => theme.colors.text700};
     height: 18px;
 
     :hover {
@@ -63,8 +63,8 @@ const RenderGoalContainer = styled(DataGoalGrid).attrs<RenderGoalContainerProps>
   }
 
   &[data-dragged] {
-    background-color: ${theme.colors.dark14};
-    color: ${theme.colors.text100};
+    background-color: ${({ theme }) => theme.colors.dark14};
+    color: ${({ theme }) => theme.colors.text100};
     border-radius: 8px;
   }
 
@@ -76,18 +76,18 @@ const RenderGoalContainer = styled(DataGoalGrid).attrs<RenderGoalContainerProps>
   }
 
   ${EditButtonOnlyIconContainer} {
-    background-color: ${theme.colors.primarySoft};
+    background-color: ${({ theme }) => theme.colors.primarySoft};
 
     &:hover {
-      background-color: ${theme.colors.secondaryHover};
+      background-color: ${({ theme }) => theme.colors.secondaryHover};
     }
 
     &:active {
-      background-color: ${theme.colors.primarySoft};
+      background-color: ${({ theme }) => theme.colors.primarySoft};
     }
   }
 
-  @media ${theme.breakpoints.dataBox422} {
+  @media ${({ theme }) => theme.breakpoints.dataBox422} {
     grid-template-columns: 18px 25px 160px 104px auto;
 
     span:nth-child(4) {

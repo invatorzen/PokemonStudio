@@ -35,10 +35,10 @@ const RenderPokemonContainer = styled(DataPokemonGrid).attrs<RenderPokemonContai
 }))<RenderPokemonContainerProps>`
   box-sizing: border-box;
   padding: 0px 4px 0px 8px;
-  box-shadow: ${({ isDragging }) => (isDragging ? `0 0 5px ${theme.colors.dark12}` : 'none')};
+  box-shadow: ${({ isDragging, theme }) => (isDragging ? `0 0 5px ${theme.colors.dark12}` : 'none')};
 
   & .drag-icon {
-    color: ${theme.colors.text700};
+    color: ${({ theme }) => theme.colors.text700};
     height: 18px;
 
     :hover {
@@ -66,7 +66,7 @@ const RenderPokemonContainer = styled(DataPokemonGrid).attrs<RenderPokemonContai
       gap: 4px;
       height: 32px;
 
-      @media ${theme.breakpoints.dataBox422} {
+      @media ${({ theme }) => theme.breakpoints.dataBox422} {
         width: 32px;
         padding: 0px;
       }
@@ -87,10 +87,10 @@ const RenderPokemonContainer = styled(DataPokemonGrid).attrs<RenderPokemonContai
   }
 
   & .error {
-    color: ${theme.colors.dangerBase};
+    color: ${({ theme }) => theme.colors.dangerBase};
 
     &:hover {
-      color: ${theme.colors.dangerBase};
+      color: ${({ theme }) => theme.colors.dangerBase};
     }
   }
 
@@ -101,20 +101,20 @@ const RenderPokemonContainer = styled(DataPokemonGrid).attrs<RenderPokemonContai
   }
 
   &[data-dragged] {
-    background-color: ${theme.colors.dark18};
-    color: ${theme.colors.text100};
+    background-color: ${({ theme }) => theme.colors.dark18};
+    color: ${({ theme }) => theme.colors.text100};
     border-radius: 8px;
   }
 
   ${EditButtonOnlyIconContainer} {
-    background-color: ${theme.colors.primarySoft};
+    background-color: ${({ theme }) => theme.colors.primarySoft};
 
     &:hover {
-      background-color: ${theme.colors.secondaryHover};
+      background-color: ${({ theme }) => theme.colors.secondaryHover};
     }
 
     &:active {
-      background-color: ${theme.colors.primarySoft};
+      background-color: ${({ theme }) => theme.colors.primarySoft};
     }
   }
 
@@ -123,7 +123,7 @@ const RenderPokemonContainer = styled(DataPokemonGrid).attrs<RenderPokemonContai
     padding: 9.5px 11px;
   }
 
-  @media ${theme.breakpoints.dataBox422} {
+  @media ${({ theme }) => theme.breakpoints.dataBox422} {
     grid-template-columns: 18px 58px 32px 102px auto;
 
     span:nth-child(5) {

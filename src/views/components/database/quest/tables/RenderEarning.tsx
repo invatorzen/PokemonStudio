@@ -40,14 +40,14 @@ const RenderEarningContainer = styled(DataEarningGrid)`
   }
 
   ${EditButtonOnlyIconContainer} {
-    background-color: ${theme.colors.primarySoft};
+    background-color: ${({ theme }) => theme.colors.primarySoft};
 
     &:hover {
-      background-color: ${theme.colors.secondaryHover};
+      background-color: ${({ theme }) => theme.colors.secondaryHover};
     }
 
     &:active {
-      background-color: ${theme.colors.primarySoft};
+      background-color: ${({ theme }) => theme.colors.primarySoft};
     }
   }
 `;

@@ -15,8 +15,8 @@ import {
 
 const DeletionContainer = styled(MessageBoxContainer)`
   ${MessageBoxIconContainer} {
-    background-color: ${theme.colors.dangerSoft};
-    color: ${theme.colors.dangerBase};
+    background-color: ${({ theme }) => theme.colors.dangerSoft};
+    color: ${({ theme }) => theme.colors.dangerBase};
   }
 `;
 

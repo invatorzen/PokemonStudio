@@ -15,7 +15,7 @@ const TitleWithIconContainer = styled.div`
   padding-top: 8px;
 
   & > h3 {
-    ${theme.fonts.titlesHeadline6};
+    ${({ theme }) => theme.fonts.titlesHeadline6};
     margin: 0;
     line-height: 22px;
     text-align: center;
@@ -29,16 +29,16 @@ const ErrorIconContainer = styled.div`
   width: 48px;
   height: 48px;
   border-radius: 100%;
-  background-color: ${theme.colors.dangerSoft};
-  color: ${theme.colors.dangerBase};
+  background-color: ${({ theme }) => theme.colors.dangerSoft};
+  color: ${({ theme }) => theme.colors.dangerBase};
 `;
 
 const TextWarningContainer = styled.div`
   display: flex;
   flex-direction: column;
   align-items: center;
-  ${theme.fonts.normalMedium};
-  color: ${theme.colors.text400};
+  ${({ theme }) => theme.fonts.normalMedium};
+  color: ${({ theme }) => theme.colors.text400};
 
   white-space: pre-line;
 
@@ -48,7 +48,7 @@ const TextWarningContainer = styled.div`
   }
 
   .red {
-    color: ${theme.colors.dangerBase};
+    color: ${({ theme }) => theme.colors.dangerBase};
   }
 `;
 

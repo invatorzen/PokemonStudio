@@ -1,9 +1,13 @@
+import type { ThemeMode } from '@src/AppTheme';
+
 export type StudioSettings = {
   tiledPath: string;
+  themeMode: ThemeMode;
 };
 
 const defaultSettings: StudioSettings = {
   tiledPath: '',
+  themeMode: 'dark',
 };
 
 /**
@@ -14,7 +18,9 @@ export const getSettings = (): StudioSettings => {
   const settingsJson = localStorage.getItem('settings');
   if (!settingsJson) return defaultSettings;
 
-  return JSON.parse(settingsJson);
+  // Merge stored settings on top of defaults so newly-added keys (e.g. themeMode)
+  // have a sane fallback when reading a localStorage blob from an older version.
+  return { ...defaultSettings, ...(JSON.parse(settingsJson) as Partial<StudioSettings>) };
 };
 
 /**

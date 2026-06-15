@@ -14,7 +14,7 @@ const WorldButtonContainer = styled(StyledNavLink)`
   .badge {
     position: absolute;
     border-radius: 100%;
-    background-color: ${theme.colors.warningBase};
+    background-color: ${({ theme }) => theme.colors.warningBase};
     width: 8px;
     height: 8px;
     right: 6px;

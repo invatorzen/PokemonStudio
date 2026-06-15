@@ -3,7 +3,8 @@ import { Toaster } from 'react-hot-toast';
 import { MemoryRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { ThemeProvider } from 'styled-components';
 import GlobalStyle from './AppGlobalStyle';
-import theme from './AppTheme';
+import { themesByMode } from './AppTheme';
+import { ThemeModeProvider, useThemeMode } from '@hooks/useThemeMode';
 import { GlobalStateProvider } from './GlobalStateProvider';
 import { NavigationBarComponent } from './views/components/navigation/NavigationBar';
 import HomePage from './views/pages/Home.page';
@@ -23,36 +24,45 @@ import DesignSystemRouterComponent from '@ds/DesignSystem.router';
 import PocRouterComponent from '@poc/Poc.router';
 import { TooltipContext } from '@ds/Tooltip/TooltipContext';
 
+const ThemedApp = () => {
+  const { mode } = useThemeMode();
+  return (
+    <ThemeProvider theme={themesByMode[mode]}>
+      <GlobalStyle />
+      <UnsavedWarningModal />
+      <MemoryRouter>
+        <NavigationBarComponent />
+        <Routes>
+          <Route path="/home" element={<HomePage />} />
+          <Route path="/dashboard/*" element={<DashboardRouter />} />
+          <Route path="/psdkupdate" element={<PSDKUpdatePage />} />
+          <Route path="/database/*" element={<DatabasePage />} />
+          <Route path="/world/*" element={<WorldRouter />} />
+          <Route path="/texts/*" element={<TextsRouter />} />
+          <Route path="/code" />
+          <Route path="/help" />
+          <Route path="/settings/*" element={<SettingsRouter />} />
+          <Route path="/account" />
+          <Route path="/designSystem/*" element={<DesignSystemRouterComponent />} />
+          <Route path="/compilation" element={<CompilationPage />} />
+          <Route path="/poc/*" element={<PocRouterComponent />} />
+          <Route path="/" element={<Navigate to="/home" />} />
+        </Routes>
+      </MemoryRouter>
+      <Loader />
+      <Toaster position="bottom-right" />
+    </ThemeProvider>
+  );
+};
+
 const App = () => {
   return (
     <TooltipContext>
       <GlobalStateProvider>
         <LoaderContextProvider>
-          <ThemeProvider theme={theme}>
-            <GlobalStyle />
-            <UnsavedWarningModal />
-            <MemoryRouter>
-              <NavigationBarComponent />
-              <Routes>
-                <Route path="/home" element={<HomePage />} />
-                <Route path="/dashboard/*" element={<DashboardRouter />} />
-                <Route path="/psdkupdate" element={<PSDKUpdatePage />} />
-                <Route path="/database/*" element={<DatabasePage />} />
-                <Route path="/world/*" element={<WorldRouter />} />
-                <Route path="/texts/*" element={<TextsRouter />} />
-                <Route path="/code" />
-                <Route path="/help" />
-                <Route path="/settings/*" element={<SettingsRouter />} />
-                <Route path="/account" />
-                <Route path="/designSystem/*" element={<DesignSystemRouterComponent />} />
-                <Route path="/compilation" element={<CompilationPage />} />
-                <Route path="/poc/*" element={<PocRouterComponent />} />
-                <Route path="/" element={<Navigate to="/home" />} />
-              </Routes>
-            </MemoryRouter>
-            <Loader />
-            <Toaster position="bottom-right" />
-          </ThemeProvider>
+          <ThemeModeProvider>
+            <ThemedApp />
+          </ThemeModeProvider>
         </LoaderContextProvider>
       </GlobalStateProvider>
     </TooltipContext>

@@ -19,18 +19,18 @@ const SaveProjectButtonContainer = styled(BaseButtonStyle)`
   padding: 14px 6px 6px 14px;
 
   &[data-disabled] {
-    background-color: ${theme.colors.dark16};
+    background-color: ${({ theme }) => theme.colors.dark16};
   }
 
   &:hover {
-    background-color: ${theme.colors.dark18};
+    background-color: ${({ theme }) => theme.colors.dark18};
   }
 
   &:active > ${SvgContainer} {
-    background-color: ${theme.colors.primarySoft};
+    background-color: ${({ theme }) => theme.colors.primarySoft};
 
     svg {
-      color: ${theme.colors.primaryBase};
+      color: ${({ theme }) => theme.colors.primaryBase};
     }
   }
 `;
@@ -48,7 +48,7 @@ type BadgeProps = {
 const Badge = styled.div<BadgeProps>`
   ${({ visible }) => !visible && 'display: none;'}
   border-radius: 100%;
-  background-color: ${theme.colors.dangerBase};
+  background-color: ${({ theme }) => theme.colors.dangerBase};
   width: 8px;
   height: 8px;
 `;

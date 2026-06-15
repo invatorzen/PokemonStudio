@@ -20,9 +20,9 @@ export const MapUpdateContainer = styled.div`
   padding: 24px;
   border-radius: 8px;
   max-width: 240px;
-  background-color: ${theme.colors.warningSoft};
-  border-color: ${theme.colors.warningSoft};
-  border: 1px solid ${theme.colors.warningSoft};
+  background-color: ${({ theme }) => theme.colors.warningSoft};
+  border-color: ${({ theme }) => theme.colors.warningSoft};
+  border: 1px solid ${({ theme }) => theme.colors.warningSoft};
   backdrop-filter: blur(12px);
 
   // TODO: Remove h2 rule from global style & remove '!important' from here!

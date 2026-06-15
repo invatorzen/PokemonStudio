@@ -10,6 +10,7 @@ export const SettingsNavigation = () => {
     <NavigationDatabaseStyle>
       <NavigationDatabaseGroup title={t('user_settings')}>
         <NavigationDatabaseItem path="/settings/language" label={t('language')} />
+        <NavigationDatabaseItem path="/settings/theme" label={t('theme')} />
       </NavigationDatabaseGroup>
       <NavigationDatabaseGroup title={t('integrations')}>
         <NavigationDatabaseItem path="/settings/maps" label={t('map_management')} />

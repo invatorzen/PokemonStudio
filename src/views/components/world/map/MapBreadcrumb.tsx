@@ -10,37 +10,37 @@ const MapBreadcrumbStyle = styled.div`
   cursor: default;
   width: 1024px;
 
-  @media ${theme.breakpoints.dataBox422} {
+  @media ${({ theme }) => theme.breakpoints.dataBox422} {
     width: 504px;
   }
 
   span {
-    font: ${theme.fonts.normalRegular};
+    font: ${({ theme }) => theme.fonts.normalRegular};
     font-weight: 400;
     font-size: 14px;
     padding: 4px 8px 4px 8px;
     gap: 8px;
 
     &.breadcrumb-divider {
-      color: ${theme.colors.text500};
+      color: ${({ theme }) => theme.colors.text500};
       padding: 4px 2px 4px 2px;
       gap: 0px;
     }
 
     &.breadcrumb-disable {
-      color: ${theme.colors.text500};
+      color: ${({ theme }) => theme.colors.text500};
     }
 
     &.breadcrumb-selected {
-      color: ${theme.colors.text100};
+      color: ${({ theme }) => theme.colors.text100};
       font-weight: 500;
     }
 
     &.breadcrumb-default {
-      color: ${theme.colors.text400};
+      color: ${({ theme }) => theme.colors.text400};
       :hover {
-        color: ${theme.colors.text400};
-        background-color: ${theme.colors.dark16};
+        color: ${({ theme }) => theme.colors.text400};
+        background-color: ${({ theme }) => theme.colors.dark16};
         border-radius: 4px;
         cursor: pointer;
       }
