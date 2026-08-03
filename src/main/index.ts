@@ -13,14 +13,30 @@ import { registerOpenCompilationWindow } from '@src/backendTasks/openCompilation
 import { registerOpenStudioLogsFolder } from '@src/backendTasks/openStudioLogsFolder';
 import { registerOpenTiled } from '@src/backendTasks/openTiled';
 import { registerReadCsvFile } from '@src/backendTasks/readCsvFile';
+import { registerReadMapAndAssets } from '@src/backendTasks/readMapAndAssets';
+import { registerReadMapBytes } from '@src/backendTasks/readMapBytes';
+import { registerReadAudioBytes } from '@src/backendTasks/readAudioBytes';
 import { registerReadMaps } from '@src/backendTasks/readMaps';
 import { registerReadRMXPEvents } from '@src/backendTasks/readRMXPEvents';
 import { registerReadRMXPMapInfo } from '@src/backendTasks/readRMXPMapInfo';
 import { registerOnlineHttpRequest } from '@src/backendTasks/onlineHttpRequest';
+import { registerWriteRMXPEvents } from '@src/backendTasks/writeRMXPEvents';
+import { registerReadRMXPSwitchNames } from '@src/backendTasks/readRMXPSwitchNames';
+import { registerReadRMXPCommonEventNames } from '@src/backendTasks/readRMXPCommonEventNames';
+import { registerReadRMXPCommonEvents } from '@src/backendTasks/readRMXPCommonEvents';
+import { registerWriteRMXPCommonEvents } from '@src/backendTasks/writeRMXPCommonEvents';
+import { registerReadOverlayShader } from '@src/backendTasks/readOverlayShader';
+import { registerDeleteMapRxdata } from '@src/backendTasks/deleteMapRxdata';
+import { registerChooseCharacterGraphic } from '@src/backendTasks/chooseCharacterGraphic';
 import { registerRequestJson } from '@src/backendTasks/requestJson';
 import { registerSaveCompilationLogs } from '@src/backendTasks/saveCompilationLogs';
 import { registerSaveEventTree } from '@src/backendTasks/saveEventTree';
 import { registerSaveMapInfo } from '@src/backendTasks/saveMapInfo';
+import { registerWriteMapBytes } from '@src/backendTasks/writeMapBytes';
+import { registerCreateTilesetFromImage } from '@src/backendTasks/createTilesetFromImage';
+import { registerReadTilesetBytes } from '@src/backendTasks/readTilesetBytes';
+import { registerWriteTilesetBytes } from '@src/backendTasks/writeTilesetBytes';
+import { registerReadTilesetImageBytes } from '@src/backendTasks/readTilesetImageBytes';
 import { registerSaveRMXPMapInfo } from '@src/backendTasks/saveRMXPMapInfo';
 import { registerSaveTextInfos } from '@src/backendTasks/saveTextInfos';
 import { registerStartCompilation } from '@src/backendTasks/startCompilation';
@@ -168,6 +184,9 @@ registerReadProjectConfigs(ipcMain);
 registerReadProjectData(ipcMain);
 registerReadProjectTexts(ipcMain);
 registerReadCsvFile(ipcMain);
+registerReadMapAndAssets(ipcMain);
+registerReadMapBytes(ipcMain);
+registerReadAudioBytes(ipcMain);
 registerMigrateData(ipcMain);
 registerFileExists(ipcMain);
 registerChooseFolder(ipcMain);
@@ -186,6 +205,11 @@ registerOpenStudioLogsFolder(ipcMain);
 registerCheckMapsModified(ipcMain);
 registerConvertTiledMapToTileMetadata(ipcMain);
 registerSaveMapInfo(ipcMain);
+registerWriteMapBytes(ipcMain);
+registerCreateTilesetFromImage(ipcMain);
+registerReadTilesetBytes(ipcMain);
+registerWriteTilesetBytes(ipcMain);
+registerReadTilesetImageBytes(ipcMain);
 registerSaveEventTree(ipcMain);
 registerStartupStudioFile(ipcMain);
 registerGetFilePathsFromFolder(ipcMain);
@@ -197,6 +221,14 @@ registerOpenTiled(ipcMain);
 registerDownloadFile(ipcMain);
 registerRequestJson(ipcMain);
 registerOnlineHttpRequest(ipcMain);
+registerWriteRMXPEvents(ipcMain);
+registerReadRMXPSwitchNames(ipcMain);
+registerReadRMXPCommonEventNames(ipcMain);
+registerReadRMXPCommonEvents(ipcMain);
+registerWriteRMXPCommonEvents(ipcMain);
+registerDeleteMapRxdata(ipcMain);
+registerReadOverlayShader(ipcMain);
+registerChooseCharacterGraphic(ipcMain);
 registerCheckDownloadNewProject(ipcMain);
 registerGeneratingMapOverview(ipcMain);
 registerOpenCompilationWindow(ipcMain);
@@ -208,4 +240,12 @@ registerReadRMXPEvents(ipcMain);
 registerConvertRMXPEventsToStudioEvents(ipcMain);
 
 ipcMain.on('get-md5-hash', (event, value: string) => (event.returnValue = crypto.createHash('md5').update(value, 'utf8').digest().toString('hex')));
+// Dev-only: expose the renderer over CDP so the Playwright driver in tools/
+// can attach and drive the UI. Opt-in via env var and never set in packaged
+// builds, so shipping behaviour is unchanged. Must be appended before the app
+// is ready — Chromium reads its switches during init.
+if (process.env.STUDIO_REMOTE_DEBUG) {
+  app.commandLine.appendSwitch('remote-debugging-port', process.env.STUDIO_REMOTE_DEBUG);
+}
+
 app.whenReady().then(createWindow).catch(log.error);

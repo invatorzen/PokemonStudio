@@ -72,6 +72,7 @@
     }
   },
   "scripts": {
+    "postinstall": "patch-package",
     "i18n": "node updater_i18n",
     "start": "node updater_i18n && run-script-os",
     "start:win32": "chcp 65001 && electron-forge start",
@@ -79,7 +80,11 @@
     "package": "electron-forge package",
     "make": "node updater_i18n && electron-forge make",
     "publish": "electron-forge publish",
-    "lint": "eslint --ext .ts,.tsx ."
+    "lint": "eslint --ext .ts,.tsx .",
+    "start:debug": "node updater_i18n && run-script-os",
+    "drive": "node tools/drive_studio.mjs",
+    "start:debug:win32": "chcp 65001 && set STUDIO_REMOTE_DEBUG=9222&& electron-forge start",
+    "start:debug:darwin:linux": "STUDIO_REMOTE_DEBUG=9222 electron-forge start"
   },
   "devDependencies": {
     "@electron-forge/cli": "^7.11.1",
@@ -110,6 +115,8 @@
     "eslint-plugin-react": "^7.37.5",
     "eslint-plugin-react-hooks": "^7.0.1",
     "node-loader": "^2.1.0",
+    "patch-package": "^8.0.1",
+    "playwright-core": "^1.61.1",
     "ts-node": "^10.9.2",
     "typescript": "^5.8.3",
     "vite": "^8.0.8",
@@ -122,6 +129,7 @@
     "@xyflow/react": "^12.10.2",
     "csv-parse": "^6.2.1",
     "csv-stringify": "^6.7.0",
+    "cuelume": "^0.1.2",
     "electron-is-dev": "^3.0.1",
     "electron-log": "^5.4.3",
     "electron-updater": "^6.8.3",
@@ -129,6 +137,7 @@
     "i18next": "^26.0.3",
     "i18next-browser-languagedetector": "^8.2.1",
     "i18next-http-backend": "^3.0.4",
+    "pixi.js": "^8.6.6",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
     "react-hot-toast": "^2.6.0",

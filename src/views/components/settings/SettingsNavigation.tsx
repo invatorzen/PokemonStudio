@@ -15,6 +15,7 @@ export const SettingsNavigation = () => {
     <NavigationSettingsStyle>
       <NavigationDatabaseGroup title={t('user_settings')}>
         <NavigationDatabaseItem path="/settings/language" label={t('language')} />
+        <NavigationDatabaseItem path="/settings/sound" label={t('sound')} />
       </NavigationDatabaseGroup>
       <NavigationDatabaseGroup title={t('app_settings')}>
         <NavigationDatabaseItem path="/settings/shortcuts" label={t('keyboard_shortcuts')} />

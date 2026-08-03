@@ -1,3 +1,5 @@
+import { useSyncExternalStore } from 'react';
+import { getPendingEdits, subscribePendingEdits } from '@src/custom/MapEditor/pendingEdits';
 import DotIcon from '@assets/icons/global/dot.svg';
 import FolderIcon from '@assets/icons/global/folder.svg';
 import FolderOpenIcon from '@assets/icons/global/folder_open.svg';
@@ -17,7 +19,13 @@ import Tree, {
 import { useContextMenu } from '@hooks/useContextMenu';
 import { useDialogsRef } from '@hooks/useDialogsRef';
 import { useMapInfo } from '@hooks/useMapInfo';
+import { useMapUpdate } from '@hooks/useMapUpdate';
 import { useProjectMaps } from '@hooks/useProjectData';
+import { useGlobalState } from '@src/GlobalStateProvider';
+import { useLoaderRef } from '@utils/loaderContext';
+import { getSetting } from '@utils/settings';
+import { playSound } from '@utils/sound';
+import { showNotification } from '@utils/showNotification';
 import { DbSymbol } from '@modelEntities/dbSymbol';
 import { MAP_NAME_TEXT_ID } from '@modelEntities/map';
 import { MAP_INFO_FOLDER_NAME_TEXT_ID, StudioMapInfoValue } from '@modelEntities/mapInfo';
@@ -47,6 +55,12 @@ type MapTreeComponentProps = {
 export const MapTreeComponent = ({ treeScrollbarRef }: MapTreeComponentProps) => {
   const { mapInfo, setMapInfo, setPartialMapInfo } = useMapInfo();
   const { selectedDataIdentifier: currentMap, setSelectedDataIdentifier: setCurrentMap, projectDataValues: maps } = useProjectMaps();
+  const [globalState] = useGlobalState();
+  const mapsModified = globalState.mapsModified;
+  // Maps with edits held in memory but not yet written to disk.
+  const pendingEdits = useSyncExternalStore(subscribePendingEdits, getPendingEdits);
+  const mapUpdate = useMapUpdate();
+  const loaderRef = useLoaderRef();
   const setText = useSetProjectText();
   const getMapName = useGetEntityNameText();
   const getFolderName = useGetEntityNameTextUsingTextId();
@@ -148,12 +162,36 @@ export const MapTreeComponent = ({ treeScrollbarRef }: MapTreeComponentProps) =>
     return isFolder ? getFolderName({ klass: item.data.klass, textId: item.data.textId }) : mapName(item.data.mapDbSymbol);
   };
 
+  const tiledPathMissing = !getSetting('tiledPath');
+
+  const updateSingleMap = (dbSymbol: DbSymbol) => {
+    if (tiledPathMissing) return;
+    mapUpdate(
+      { type: 'auto_detection', subsetDbSymbols: [dbSymbol] },
+      () => {
+        loaderRef.current.close();
+        showNotification('success', t('update_maps'), t('update_maps_success'));
+      },
+      (error, genericError) => {
+        if (error.length !== 0) {
+          error.forEach((err) => window.api.log.error(`[Map update] ${err.filename}.tmx:`, err.errorMessage));
+          loaderRef.current.setError('updating_maps_error', t('update_maps_error_convert'), true);
+        } else {
+          loaderRef.current.setError('updating_maps_error', genericError || t('update_maps_error_generic'), true);
+        }
+      },
+    );
+  };
+
   const renderItem = ({ item, onExpand, onCollapse, provided, snapshot }: RenderItemParams) => {
     const isFolder = item.data.klass === 'MapInfoFolder';
     const countChildren = isFolder ? getMapTreeCountChildren(tree, item) : undefined;
     const isDeleted = item.data.klass === 'MapInfoMap' && !maps[item.data.mapDbSymbol];
     const currentDepth = getMapTreeItemDepth(tree, item);
     const isUnderOpenFolder = searchIsUnderOpenFolder(tree, item, 'MapInfoMap');
+    const itemDbSymbol = item.data?.klass === 'MapInfoMap' ? (item.data.mapDbSymbol as DbSymbol) : undefined;
+    const isModified = !!itemDbSymbol && mapsModified.includes(itemDbSymbol);
+    const hasUnsaved = !!itemDbSymbol && pendingEdits.some((edit) => edit.dbSymbol === itemDbSymbol);
 
     renderDropBox(snapshot.combineWith, treeRef);
 
@@ -193,6 +231,9 @@ export const MapTreeComponent = ({ treeScrollbarRef }: MapTreeComponentProps) =>
             if (!item.data.mapDbSymbol || isFolder) return;
             if (isDeleted) return;
 
+            // Selecting a map in the list, same family as switching a tab.
+            // Only on an actual change, not re-clicking the open map.
+            if (item.data.mapDbSymbol !== currentMap) playSound('whisper');
             setCurrentMap({ map: item.data.mapDbSymbol });
             const targetMap = maps[item.data.mapDbSymbol];
             if (!targetMap?.tiledFilename && location.pathname === '/world/overview') {
@@ -219,6 +260,18 @@ export const MapTreeComponent = ({ treeScrollbarRef }: MapTreeComponentProps) =>
             )}
           </div>
           {isFolder && !!countChildren && <span className="count-children">{countChildren}</span>}
+          {!canRename && (isModified || hasUnsaved) && itemDbSymbol && (
+            <span
+              className="modified-indicator"
+              title={hasUnsaved ? t('map_unsaved_changes') : tiledPathMissing ? t('map_process_disabled') : t('update_maps')}
+              onClick={(e) => {
+                e.stopPropagation();
+                // Unsaved in-memory edits aren't a re-process job — only the
+                // "modified on disk" case has something for Tiled to redo.
+                if (!hasUnsaved) updateSingleMap(itemDbSymbol);
+              }}
+            />
+          )}
           {!canRename && (
             <div className="actions">
               <span className="icon icon-dot" onClick={openMenu}>
