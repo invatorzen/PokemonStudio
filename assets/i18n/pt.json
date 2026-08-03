@@ -1950,7 +1950,7 @@
   "save_maps_dialog_cancel": "Cancel",
   "save_maps_dialog_confirm": "Save {{count}} map(s)",
   "save_maps_dialog_file": "Becomes",
-  "save_maps_dialog_writes": "Saves"
+  "save_maps_dialog_writes": "Saves",
   "keyboard_shortcuts": "Keyboard Shortcuts",
   "shortcut_category_default": "Default shortcuts",
   "shortcut_category_navigation": "Navigation",

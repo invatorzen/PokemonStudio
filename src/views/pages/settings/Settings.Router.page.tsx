@@ -4,7 +4,6 @@ import React from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { SettingsLanguagePage } from './Settings.language.page';
 import { SettingsSoundPage } from './Settings.sound.page';
-import { PageWithMenu, PageWithMenuProps } from '@components/pages';
 import { SettingsMapsPage } from './Settings.maps.page';
 import { SettingsShortcutsPage } from './Settings.shortcuts.page';
 
