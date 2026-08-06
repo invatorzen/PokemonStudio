@@ -28,7 +28,10 @@ import type { GiftCreature, GiftEgg } from '@utils/onlineApi';
 const Overlay = styled.div`
   position: fixed;
   inset: 0;
-  z-index: 9998;
+  /* Below StudioDropDown's portaled menu (zIndex 6000) so this modal's own
+     dropdowns (moves/abilities/form/gender/shiny) render in FRONT of it, while
+     still sitting above the gift editor overlay (~100) underneath. */
+  z-index: 5000;
   background-color: rgba(10, 9, 11, 0.5);
   display: flex;
   align-items: center;

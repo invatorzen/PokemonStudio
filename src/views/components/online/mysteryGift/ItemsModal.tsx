@@ -11,7 +11,9 @@ import type { GiftItem } from '@utils/onlineApi';
 const Overlay = styled.div`
   position: fixed;
   inset: 0;
-  z-index: 9998;
+  /* Below StudioDropDown's portaled menu (zIndex 6000) so this modal's item
+     dropdown renders in FRONT of it, while still above the editor overlay. */
+  z-index: 5000;
   background-color: rgba(10, 9, 11, 0.5);
   display: flex;
   align-items: center;

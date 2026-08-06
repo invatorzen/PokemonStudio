@@ -93,7 +93,7 @@ export const TitleBar = () => {
 
   return window.api.platform === 'win32' ? (
     <TitleBarContainer>
-      <TitleBarHeader>Pokémon Studio</TitleBarHeader>
+      <TitleBarHeader>Custom Pokémon Studio</TitleBarHeader>
       <TitleBarActions>
         <span className="minimize" onClick={() => window.api.minimize()}>
           &#xE921;
