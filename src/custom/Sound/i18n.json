@@ -1,0 +1,10 @@
+{
+  "en": {
+    "sound_enabled": "Enable interaction sounds",
+    "sound_enabled_help": "Play short sounds when actions finish — saving, building, loading a project, switching tabs and similar. You can turn this off at any time."
+  },
+  "fr": {
+    "sound_enabled": "Activer les sons d'interaction",
+    "sound_enabled_help": "Jouer un court son à la fin d'une action — sauvegarde, compilation, chargement d'un projet, changement d'onglet, etc. Désactivable à tout moment."
+  }
+}

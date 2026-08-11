@@ -19,9 +19,13 @@ export const NavigationDatabase = () => {
       </NavigationDatabaseGroup>
       <NavigationDatabaseGroup title={t('level_design')}>
         <NavigationDatabaseItem path="/database/zones" label={t('zones')} />
+        <NavigationDatabaseItem path="/database/grottos" label={t('grottos')} />
         <NavigationDatabaseItem path="/database/groups" label={t('groups')} />
         <NavigationDatabaseItem path="/database/trainers" label={t('trainers')} />
         <NavigationDatabaseItem path="/database/quests" label={t('quests')} />
+      </NavigationDatabaseGroup>
+      <NavigationDatabaseGroup title={t('system')}>
+        <NavigationDatabaseItem path="/database/switches-variables" label={t('sv_nav')} />
       </NavigationDatabaseGroup>
     </NavigationDatabaseStyle>
   );

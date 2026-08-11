@@ -47,6 +47,16 @@ import type { ReadRMXPMapInput, ReadRMXPMapOutput } from './backendTasks/readRMX
 import type { ReadRMXPMapInfoInput, ReadRMXPMapInfoOutput } from './backendTasks/readRMXPMapInfo';
 import type { RequestJsonInput, RequestJsonOutput } from './backendTasks/requestJson';
 import type { OnlineHttpRequestInput, OnlineHttpRequestOutput } from './backendTasks/onlineHttpRequest';
+import type {
+  ReadHiddenGrottoInput,
+  ReadHiddenGrottoOutput,
+  WriteHiddenGrottoInput,
+  WriteHiddenGrottoOutput,
+} from './backendTasks/hiddenGrotto';
+import type { ReadSosBattleInput, ReadSosBattleOutput, WriteSosBattleInput, WriteSosBattleOutput } from './backendTasks/sosBattle';
+import type { ApplyDataPackInput, ApplyDataPackOutput, CheckDataPackEnvOutput } from './backendTasks/applyDataPack';
+import type { WriteRMXPSwitchNamesInput, WriteRMXPSwitchNamesOutput } from './backendTasks/writeRMXPSwitchNames';
+import type { ReadUmbraSwitchRegistryInput, ReadUmbraSwitchRegistryOutput } from './backendTasks/readUmbraSwitchRegistry';
 import type { SaveCompilationLogsInput } from './backendTasks/saveCompilationLogs';
 import type { SaveEventTreeInput } from './backendTasks/saveEventTree';
 import type { SaveMapInfoInput } from './backendTasks/saveMapInfo';
@@ -178,6 +188,14 @@ contextBridge.exposeInMainWorld('api', {
   downloadFile: defineBackendTask(ipcRenderer, 'download-file'),
   requestJson: defineBackendTask(ipcRenderer, 'request-json'),
   onlineHttpRequest: defineBackendTask(ipcRenderer, 'online-http-request'),
+  readHiddenGrotto: defineBackendTask(ipcRenderer, 'read-hidden-grotto'),
+  writeHiddenGrotto: defineBackendTask(ipcRenderer, 'write-hidden-grotto'),
+  readSosBattle: defineBackendTask(ipcRenderer, 'read-sos-battle'),
+  writeSosBattle: defineBackendTask(ipcRenderer, 'write-sos-battle'),
+  applyDataPack: defineBackendTask(ipcRenderer, 'apply-data-pack'),
+  checkDataPackEnv: defineBackendTask(ipcRenderer, 'check-data-pack-env'),
+  writeRMXPSwitchNames: defineBackendTask(ipcRenderer, 'write-rmxp-switch-names'),
+  readUmbraSwitchRegistry: defineBackendTask(ipcRenderer, 'read-umbra-switch-registry'),
   checkDownloadNewProject: defineBackendTask(ipcRenderer, 'check-download-new-project'),
   generatingMapOverview: defineBackendTask(ipcRenderer, 'generating-map-overview'),
   openCompilationWindow: defineBackendTask(ipcRenderer, 'open-compilation-window'),
@@ -290,6 +308,14 @@ declare global {
       downloadFile: BackendTaskWithGenericError<DownloadFileInput, AnyObj, GenericBackendProgress>;
       requestJson: BackendTaskWithGenericErrorAndNoProgress<RequestJsonInput, RequestJsonOutput>;
       onlineHttpRequest: BackendTaskWithGenericErrorAndNoProgress<OnlineHttpRequestInput, OnlineHttpRequestOutput>;
+      readHiddenGrotto: BackendTaskWithGenericErrorAndNoProgress<ReadHiddenGrottoInput, ReadHiddenGrottoOutput>;
+      writeHiddenGrotto: BackendTaskWithGenericErrorAndNoProgress<WriteHiddenGrottoInput, WriteHiddenGrottoOutput>;
+      readSosBattle: BackendTaskWithGenericErrorAndNoProgress<ReadSosBattleInput, ReadSosBattleOutput>;
+      writeSosBattle: BackendTaskWithGenericErrorAndNoProgress<WriteSosBattleInput, WriteSosBattleOutput>;
+      applyDataPack: BackendTaskWithGenericErrorAndNoProgress<ApplyDataPackInput, ApplyDataPackOutput>;
+      checkDataPackEnv: BackendTaskWithGenericErrorAndNoProgress<AnyObj, CheckDataPackEnvOutput>;
+      writeRMXPSwitchNames: BackendTaskWithGenericErrorAndNoProgress<WriteRMXPSwitchNamesInput, WriteRMXPSwitchNamesOutput>;
+      readUmbraSwitchRegistry: BackendTaskWithGenericErrorAndNoProgress<ReadUmbraSwitchRegistryInput, ReadUmbraSwitchRegistryOutput>;
       checkDownloadNewProject: BackendTaskWithGenericErrorAndNoProgress<CheckDownloadNewProjectInput, CheckDownloadNewProjectOutput>;
       generatingMapOverview: BackendTaskWithGenericErrorAndNoProgress<GeneratingMapOverviewInput, AnyObj>;
       openCompilationWindow: BackendTaskWithGenericErrorAndNoProgress<OpenCompilationWindowInput, AnyObj>;

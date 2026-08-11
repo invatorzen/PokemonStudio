@@ -17,6 +17,7 @@ import { DatabaseTabsBar } from '@components/database/DatabaseTabsBar';
 import { useDialogsRef } from '@hooks/useDialogsRef';
 import { PokemonEditorAndDeletionKeys, PokemonEditorOverlay } from '@components/database/pokemon/editors/PokemonEditorOverlay';
 import { useCreaturePage } from '@hooks/usePage';
+import { SosDataBlock } from '@src/custom/SOS/SosDataBlock';
 
 export const PokemonPage = () => {
   const [evolutionIndex, setEvolutionIndex] = useState(0);
@@ -53,6 +54,7 @@ export const PokemonPage = () => {
             <ExperienceDataBlock pokemonWithForm={pokemonWithForm} dialogsRef={dialogsRef} />
             <ReproductionDataBlock pokemonWithForm={pokemonWithForm} dialogsRef={dialogsRef} />
             <EncounterDataBlock pokemonWithForm={pokemonWithForm} dialogsRef={dialogsRef} />
+            <SosDataBlock pokemonWithForm={pokemonWithForm} dialogsRef={dialogsRef} />
             <StatisticsDataBlock pokemonWithForm={pokemonWithForm} dialogsRef={dialogsRef} />
           </DataBlockWrapper>
           <DataBlockWrapper>

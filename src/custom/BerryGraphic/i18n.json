@@ -1,0 +1,14 @@
+{
+  "en": {
+    "berries_event_data": "Event data",
+    "berries_event_graphic": "Charset",
+    "berries_event_graphic_default": "Default (automatic)",
+    "berries_event_graphic_info": "Charset used for this berry's tree when it is planted with the Create Berry Tree event command. Click the pencil to pick one from graphics/characters, or drop an image onto the field. Leave it on the default to keep PSDK's automatic sprite based on the item id."
+  },
+  "fr": {
+    "berries_event_data": "Données d'événement",
+    "berries_event_graphic": "Charset",
+    "berries_event_graphic_default": "Par défaut (automatique)",
+    "berries_event_graphic_info": "Charset utilisé pour l'arbre de cette baie lorsqu'elle est plantée via la commande d'événement Créer un arbre à baies. Cliquez sur le crayon pour en choisir un dans graphics/characters, ou déposez une image sur le champ. Laissez la valeur par défaut pour conserver le sprite automatique de PSDK basé sur l'id de l'objet."
+  }
+}

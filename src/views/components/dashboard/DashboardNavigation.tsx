@@ -29,6 +29,8 @@ export const DashboardNavigation = () => {
         <NavigationDatabaseItem path="/dashboard/save" label={t('dashboard_save')} />
         <NavigationDatabaseItem path="/dashboard/gamestart" label={t('game_start')} />
         <NavigationDatabaseItem path="/dashboard/gameOptions" label={t('options')} />
+        <NavigationDatabaseItem path="/dashboard/sos" label={t('sos_settings_nav')} />
+        <NavigationDatabaseItem path="/dashboard/data-packs" label={t('dp_nav')} />
         <NavigationDatabaseItem path="/dashboard/credits" label={t('credits')} />
       </NavigationDatabaseGroup>
     </NavigationDatabaseStyle>

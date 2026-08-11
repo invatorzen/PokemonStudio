@@ -1,0 +1,38 @@
+{
+  "en": {
+    "system": "System",
+    "sv_title": "Switches & Variables",
+    "sv_nav": "Switches & Variables",
+    "sv_intro": "Name the game switches and variables stored in System.rxdata. These names appear in the event editor's pickers. Edits are saved with the bottom-left Save button.",
+    "sv_loading": "Loading…",
+    "sv_switches": "Switches",
+    "sv_variables": "Variables",
+    "sv_count": "{{named}} named / {{total}}",
+    "sv_add": "Add",
+    "sv_search": "Search by id or name…",
+    "sv_unnamed": "(unnamed)",
+    "sv_delete": "Clear name (frees this id)",
+    "sv_sort": "Sort by",
+    "sv_sort_id": "ID",
+    "sv_sort_alpha": "Name (A–Z)",
+    "sv_sort_used": "Used first"
+  },
+  "fr": {
+    "system": "Système",
+    "sv_title": "Interrupteurs et variables",
+    "sv_nav": "Interrupteurs et variables",
+    "sv_intro": "Nommez les interrupteurs et variables du jeu stockés dans System.rxdata. Ces noms apparaissent dans les sélecteurs de l'éditeur d'événements. Les modifications sont enregistrées avec le bouton Enregistrer en bas à gauche.",
+    "sv_loading": "Chargement…",
+    "sv_switches": "Interrupteurs",
+    "sv_variables": "Variables",
+    "sv_count": "{{named}} nommés / {{total}}",
+    "sv_add": "Ajouter",
+    "sv_search": "Rechercher par id ou nom…",
+    "sv_unnamed": "(sans nom)",
+    "sv_delete": "Effacer le nom (libère cet id)",
+    "sv_sort": "Trier par",
+    "sv_sort_id": "ID",
+    "sv_sort_alpha": "Nom (A–Z)",
+    "sv_sort_used": "Utilisés d'abord"
+  }
+}

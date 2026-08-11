@@ -31,7 +31,7 @@ export type CmdFormKind =
   | 'scrollMap' | 'screenShake' | 'prepareTransition' | 'executeTransition' | 'menuAccess'
   | 'changeFog' | 'changeFogOpacity' | 'weather' | 'changePanorama' | 'changeBattleback' | 'rotatePicture'
   | 'exitEvent' | 'setEventLocation' | 'controlTimer' | 'inputNumber' | 'buttonInput'
-  | 'changeSaveAccess' | 'changeEncounter' | 'trainerBattle' | 'wildBattle'
+  | 'changeSaveAccess' | 'changeEncounter' | 'trainerBattle' | 'wildBattle' | 'sosBattle' | 'bossBattle'
   | 'gameOver' | 'callMenu' | 'callSave' | 'textOptions' | 'windowskin' | 'battleEndMe'
   | 'healParty' | 'learnMove' | 'forgetMove' | 'selectParty' | 'berryTree' | 'mapOverlay' | 'mapOverlaySet'
   | 'berryTake' | 'berryWater' | 'berryPlant' | 'berryInteraction';
@@ -50,6 +50,38 @@ export const AUDIO_KINDS: Record<string, { code: number; folder: string }> = {
 
 /** PSDK stat order for IV/EV arrays: [hp, atk, dfe, spd, ats, dfs]. */
 export const STAT_KEYS = ['hp', 'atk', 'dfe', 'spd', 'ats', 'dfs'] as const;
+
+/** db_symbols of the boss effects the cc-pokemon-boss-system plugin registers. */
+export const BOSS_EFFECTS = [
+  'berserker_boss',
+  'stall_boss',
+  'dominant_boss',
+  'analyst_boss',
+  'opportunist_boss',
+  'enrage_boss',
+  'adaptive_boss',
+  'siphon_boss',
+  'mega_boss',
+] as const;
+
+/**
+ * Boss configuration shared by the Start Boss Battle command and the boss fields
+ * of Add Creature. Maps to the opts the boss plugin reads off PFM::Pokemon:
+ * `nb_bars_hp`, `boss_aura` and `boss_effects`.
+ *  - `bars`: 0–5 extra HP bars (0 = a normal single gauge).
+ *  - `aura`: 'none' (no aura), 'default' (crimson), or a type db_symbol.
+ *  - `effects`: boss-effect db_symbols (known ones plus any custom symbols).
+ */
+export type BossConfig = { bars: number; aura: string; effects: string[] };
+
+/** One boss in a Start Boss Battle command: a creature plus its boss config. */
+export type BossMon = { species: string; form: number; level: number; shiny: boolean; config: BossConfig };
+
+/** A fresh boss config at the plugin's typical defaults (one bar, no aura). */
+export const emptyBossConfig = (): BossConfig => ({ bars: 1, aura: 'none', effects: [] });
+
+/** A fresh boss combatant for the Start Boss Battle list. */
+export const emptyBossMon = (): BossMon => ({ species: '__undef__', form: 0, level: 50, shiny: false, config: emptyBossConfig() });
 
 /** One Show-Choices option: a literal string or a PSDK CSV reference. */
 export type ChoiceEntry = { mode: 'raw' | 'csv'; text: string; csvFile: number; csvLine: number };
@@ -166,6 +198,25 @@ export type CmdForm = {
   trainerId: number;
   trainerBgm: string;
   trainerTroop: number;
+  /**
+   * SOS Battle → the cc-sos-battles interpreter's
+   * sos_battle(enabled:, species:, trainers:). Configures the SOS mechanic for
+   * the NEXT battle only. `sosSpecies` is an ordered list of creature dbSymbols
+   * summoned in turn (empty = the area/config pools). `sosTrainers` are
+   * reinforcement trainers, each with a join rate in percent.
+   */
+  sosEnabled: boolean;
+  sosSpecies: string[];
+  sosTrainers: { id: number; rate: number }[];
+  /**
+   * Boss system (cc-pokemon-boss-system). `bossEnabled` + `bossConfig` turn an
+   * Add Creature into a boss (opts forwarded through add_specific_pokemon).
+   * `bossMons` + `bossBattleId` drive Start Boss Battle's call_battle_boss.
+   */
+  bossEnabled: boolean;
+  bossConfig: BossConfig;
+  bossBattleId: number;
+  bossMons: BossMon[];
   /** Change Text Options (104): message position 0 top/1 middle/2 bottom, frame 0 normal/1 dim. */
   textPosition: number;
   textFrame: number;
@@ -357,6 +408,8 @@ export const emptyForm = (kind: CmdFormKind, mode: 'insert' | 'edit'): CmdForm =
   battlebackName: '__undef__',
   // Trainer 5's a common demo id; troop 3 = standard Trainer battle.
   trainerId: 1, trainerBgm: '__undef__', trainerTroop: 3,
+  sosEnabled: true, sosSpecies: [], sosTrainers: [],
+  bossEnabled: false, bossConfig: emptyBossConfig(), bossBattleId: 1, bossMons: [emptyBossMon()],
   textPosition: 2, textFrame: 0,
   windowskinName: '__undef__',
   moveByVar: true, movePartyIndex: 1, moveSkill: '__undef__',
@@ -508,6 +561,10 @@ export const buildCommandsFromForm = (form: CmdForm, indent: number): WorkingCom
       return buildTextChain(355, buildTrainerBattleScript(form), indent);
     case 'wildBattle':
       return buildTextChain(355, buildWildBattleScript(form), indent);
+    case 'sosBattle':
+      return buildTextChain(355, buildSosBattleScript(form), indent);
+    case 'bossBattle':
+      return buildTextChain(355, buildBossBattleScript(form), indent);
     case 'weather':
       // command_236: $game_screen.weather(type, power, duration).
       return [{ code: 236, indent, parameters: [form.weatherType, Math.max(0, form.weatherPower), Math.max(0, form.weatherDuration)] }];
@@ -710,13 +767,32 @@ const buildItemScript = (form: CmdForm): string => {
 };
 
 /**
+ * The boss opts a PFM::Pokemon hash carries, read by the cc-pokemon-boss-system
+ * Initialize patch (`opts[:boss]`, `:nb_bars_hp`, `:boss_aura`, `:boss_effects`).
+ * `boss_aura` is `true` for the default crimson, a `:type` symbol, or omitted for
+ * none. Zero bars and empty effects are dropped to keep the hash minimal.
+ * @param cfg [BossConfig]
+ * @returns Ruby `key: value` fragments, `boss: true` first.
+ */
+const bossOptParts = (cfg: BossConfig): string[] => {
+  const parts = ['boss: true'];
+  if (cfg.bars > 0) parts.push(`nb_bars_hp: ${cfg.bars}`);
+  if (cfg.aura === 'default') parts.push('boss_aura: true');
+  else if (cfg.aura && cfg.aura !== 'none' && cfg.aura !== '__undef__') parts.push(`boss_aura: :${cfg.aura}`);
+  const effects = cfg.effects.filter((e) => e && e !== '__undef__');
+  if (effects.length) parts.push(`boss_effects: [${effects.map((e) => `:${e}`).join(', ')}]`);
+  return parts;
+};
+
+/**
  * PSDK add_pokemon / add_specific_pokemon call. Falls back to the terse
- * add_pokemon form when nothing beyond species/level/shiny is customized.
+ * add_pokemon form when nothing beyond species/level/shiny is customized. A boss
+ * always uses the hash form so its boss opts ride along.
  */
 const buildCreatureScript = (form: CmdForm): string => {
   const moves = form.moves.filter((m) => m && m !== '__undef__');
   const hasNature = !!form.nature && form.nature !== '__undef__';
-  const customized = form.nickname.trim() !== '' || hasNature || moves.length > 0 || form.customIvs || form.customEvs;
+  const customized = form.nickname.trim() !== '' || hasNature || moves.length > 0 || form.customIvs || form.customEvs || form.bossEnabled;
   if (!customized) return `add_pokemon(:${form.species}, ${form.level}${form.shiny ? ', true' : ''})`;
 
   const parts = [`id: :${form.species}`, `level: ${form.level}`];
@@ -726,7 +802,68 @@ const buildCreatureScript = (form: CmdForm): string => {
   if (moves.length > 0) parts.push(`moves: [${moves.map((m) => `:${m}`).join(', ')}]`);
   if (form.customIvs) parts.push(`stats: [${form.ivs.join(', ')}]`);
   if (form.customEvs) parts.push(`bonus: [${form.evs.join(', ')}]`);
+  if (form.bossEnabled) parts.push(...bossOptParts(form.bossConfig));
   return `add_specific_pokemon({ ${parts.join(', ')} })`;
+};
+
+/**
+ * Start Boss Battle → the cc-pokemon-boss-system interpreter's call_battle_boss.
+ * Builds each boss as an inline PFM::Pokemon.new with its opts hash, then passes
+ * the shared battle_id keyword last (a scenarized-battle id).
+ */
+const buildBossBattleScript = (form: CmdForm): string => {
+  const mons = form.bossMons.filter((m) => m.species && m.species !== '__undef__');
+  const args = mons.map((m) => {
+    const opts = bossOptParts(m.config).join(', ');
+    return `PFM::Pokemon.new(:${m.species}, ${m.level}, ${m.shiny ? 'true' : 'false'}, false, ${m.form}, { ${opts} })`;
+  });
+  args.push(`battle_id: ${form.bossBattleId}`);
+  return `call_battle_boss(${args.join(', ')})`;
+};
+
+/** Parse the boss opts of a PFM::Pokemon hash/args body into a BossConfig. */
+const bossConfigFromBody = (body: string): BossConfig => {
+  const bars = body.match(/(?:^|[,{]|\s)nb_bars_hp:\s*(\d+)/);
+  const auraSym = body.match(/boss_aura:\s*:(\w+)/);
+  const auraDefault = /boss_aura:\s*true/.test(body);
+  const effects = body.match(/boss_effects:\s*\[([^\]]*)\]/);
+  return {
+    bars: bars ? Number(bars[1]) : 0,
+    aura: auraSym ? auraSym[1] : auraDefault ? 'default' : 'none',
+    effects: effects ? effects[1].split(',').map((s) => s.trim().replace(/^:/, '')).filter(Boolean) : [],
+  };
+};
+
+const BOSS_BATTLE_RE = /^call_battle_boss\((.*)\)$/;
+const bossFormFromScript = (script: string): CmdForm | null => {
+  const outer = script.match(BOSS_BATTLE_RE);
+  if (!outer) return null;
+  const monMatches = outer[1].match(/PFM::Pokemon\.new\(([^)]*)\)/g);
+  if (!monMatches) return null;
+
+  const form = emptyForm('bossBattle', 'edit');
+  const battleId = outer[1].match(/battle_id:\s*(\d+)/);
+  if (battleId) form.bossBattleId = Number(battleId[1]);
+
+  const mons = monMatches
+    .map((mon): BossMon | null => {
+      const body = mon.match(/PFM::Pokemon\.new\(([^)]*)\)/)?.[1];
+      if (!body) return null;
+      // :species, level, shiny, no_shiny, form, { opts }
+      const head = body.match(/^\s*:(\w+)\s*,\s*(\d+)\s*,\s*(true|false)\s*,\s*(?:true|false)\s*,\s*(-?\d+)/);
+      if (!head) return null;
+      return {
+        species: head[1],
+        level: Number(head[2]),
+        shiny: head[3] === 'true',
+        form: Number(head[4]),
+        config: bossConfigFromBody(body),
+      };
+    })
+    .filter((m): m is BossMon => m !== null);
+
+  if (mons.length) form.bossMons = mons;
+  return form;
 };
 
 /** Kinds whose single parameter is an audio file. */
@@ -753,6 +890,7 @@ export const canSubmitForm = (f: CmdForm): boolean => {
   if (f.kind === 'choices') return f.choices.some((c) => choiceText(c).length > 0);
   if (f.kind === 'item' || f.kind === 'berryTree') return f.itemSymbol !== '__undef__';
   if (f.kind === 'creature' || f.kind === 'wildBattle') return f.species !== '__undef__';
+  if (f.kind === 'bossBattle') return f.bossMons.some((m) => m.species && m.species !== '__undef__');
   if (f.kind === 'learnMove' || f.kind === 'forgetMove') return f.moveSkill !== '__undef__';
   if (f.kind === 'windowskin') return f.windowskinName !== '__undef__';
   // A branch needs at least one condition that can actually be built — an empty
@@ -1425,6 +1563,34 @@ const trainerFormFromScript = (script: string): CmdForm | null => {
   return form;
 };
 
+// SOS Battle → the cc-sos-battles interpreter's sos_battle(...). Only the args
+// that carry data are emitted: species/trainers are dropped when empty so the
+// interpreter keeps its nil defaults (area/config pools, no trainer joins).
+const buildSosBattleScript = (form: CmdForm): string => {
+  const args = [`enabled: ${form.sosEnabled ? 'true' : 'false'}`];
+  const species = form.sosSpecies.filter((s) => s && s !== '__undef__');
+  if (species.length) args.push(`species: [${species.map((s) => `:${s}`).join(', ')}]`);
+  const trainers = form.sosTrainers.filter((tr) => tr.id > 0);
+  if (trainers.length) args.push(`trainers: [${trainers.map((tr) => `[${tr.id}, ${tr.rate}]`).join(', ')}]`);
+  return `sos_battle(${args.join(', ')})`;
+};
+const SOS_BATTLE_RE = /^sos_battle\(enabled:\s*(true|false)(?:,\s*species:\s*\[([^\]]*)\])?(?:,\s*trainers:\s*\[(.*)\])?\)$/;
+const sosFormFromScript = (script: string): CmdForm | null => {
+  const m = script.match(SOS_BATTLE_RE);
+  if (!m) return null;
+  const form = emptyForm('sosBattle', 'edit');
+  form.sosEnabled = m[1] === 'true';
+  if (m[2]) form.sosSpecies = m[2].split(',').map((s) => s.trim().replace(/^:/, '')).filter(Boolean);
+  if (m[3]) {
+    const pairs = m[3].match(/\[\s*\d+\s*,\s*\d+\s*\]/g) || [];
+    form.sosTrainers = pairs.map((pair) => {
+      const nums = pair.match(/\d+/g) as RegExpMatchArray;
+      return { id: Number(nums[0]), rate: Number(nums[1]) };
+    });
+  }
+  return form;
+};
+
 const MONEY_SET_RE = /^\$pokemon_party\.money\s*=\s*(?:\$game_variables\[(\d+)\]|(\d+))$/;
 const moneyFormFromScript = (script: string): CmdForm | null => {
   const m = script.match(MONEY_SET_RE);
@@ -1524,13 +1690,17 @@ const creatureFormFromScript = (script: string): CmdForm | null => {
     form.evs = evs;
     form.customEvs = true;
   }
+  if (/(?:^|,)\s*boss:\s*true/.test(body)) {
+    form.bossEnabled = true;
+    form.bossConfig = bossConfigFromBody(body);
+  }
   return form;
 };
 
 /** A script command that's really an Add Item / Add Creature, or null. */
 const structuredScriptForm = (script: string): CmdForm | null => {
   const trimmed = script.trim();
-  return itemFormFromScript(trimmed) ?? creatureFormFromScript(trimmed) ?? waitFormFromScript(trimmed) ?? moneyFormFromScript(trimmed) ?? trainerFormFromScript(trimmed) ?? wildFormFromScript(trimmed) ?? gameplayFormFromScript(trimmed);
+  return itemFormFromScript(trimmed) ?? creatureFormFromScript(trimmed) ?? waitFormFromScript(trimmed) ?? moneyFormFromScript(trimmed) ?? trainerFormFromScript(trimmed) ?? wildFormFromScript(trimmed) ?? sosFormFromScript(trimmed) ?? bossFormFromScript(trimmed) ?? gameplayFormFromScript(trimmed);
 };
 
 export const formFromChain = (chain: { entries: WorkingCommand[] }, isCsvFile?: IsCsvFile): CmdForm | null => {

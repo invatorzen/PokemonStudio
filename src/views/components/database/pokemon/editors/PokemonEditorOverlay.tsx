@@ -14,6 +14,7 @@ import { PokedexEditor } from './PokedexEditor';
 import { PokemonFormNewEditor } from './PokemonFormNewEditor';
 import { PokemonNewEditor } from './PokemonNewEditor';
 import { StatEditor } from './StatsEditor';
+import { SosEditor } from '@src/custom/SOS/SosEditor';
 
 export type PokemonEditorAndDeletionKeys =
   | 'information'
@@ -24,6 +25,7 @@ export type PokemonEditorAndDeletionKeys =
   | 'stats'
   | 'encounter'
   | 'evolution'
+  | 'sos'
   | 'new'
   | 'newForm'
   | 'deletion'
@@ -69,6 +71,8 @@ export const PokemonEditorOverlay = defineEditorOverlay<
       return <PokedexEditor ref={handleCloseRef} />;
     case 'stats':
       return <StatEditor ref={handleCloseRef} />;
+    case 'sos':
+      return <SosEditor ref={handleCloseRef} />;
     default:
       return assertUnreachable(dialogToShow);
   }

@@ -222,7 +222,13 @@ export const StudioDropDown = ({ value, options, onChange, optionals }: StudioDr
     // Open downward unless it would spill past the viewport bottom and there's
     // room above — same "flip up when cramped" behaviour, now viewport-aware.
     const openUp = r.bottom + 4 + menuHeight > window.innerHeight && r.top - menuHeight - 4 >= 0;
-    setMenuPos({ left: r.left, width: r.width, top: openUp ? r.top - menuHeight - 4 : r.bottom + 4 });
+    // The menu renders at least 240px wide (min-width below). Left-anchoring it
+    // at the field pushes that width off the right edge when the field sits in a
+    // narrow, right-docked panel (e.g. the SOS ally editor), so clamp the left
+    // so the whole menu stays on screen. No effect when it already fits.
+    const menuWidth = Math.max(r.width, 240);
+    const left = Math.max(8, Math.min(r.left, window.innerWidth - menuWidth - 8));
+    setMenuPos({ left, width: r.width, top: openUp ? r.top - menuHeight - 4 : r.bottom + 4 });
   }, [isOpen, menuHeight]);
 
   const closeDropDown = () => {

@@ -4,14 +4,16 @@ import { useTranslation } from 'react-i18next';
 import { useGlobalState } from '@src/GlobalStateProvider';
 import { Toggle } from '@components/inputs';
 import { SelectPokemon } from '@components/selects/SelectPokemon';
+import { SelectPokemonForm } from '@components/selects/SelectPokemonForm';
 import { SelectItem } from '@components/selects/SelectItem';
 import { SelectMove } from '@components/selects/SelectMove';
 import { SelectNature } from '@components/selects/SelectNature';
+import { SelectType } from '@components/selects/SelectType';
 import { BlockTitle, CheckLabel, CmdGroupTitle, DIALOG_BODY_ATTR, Dim, FormActions, FormArea, FormScroll, FormTextArea, OpBtn, Row, SmallInput, SmallSelect } from './styles';
 import { ScriptEditor } from './ScriptEditor';
 import { NamePicker, OnOff } from './fields';
 import { DIRECTIONS } from '../rmxpEventUtils';
-import { AUDIO_KINDS, BERRY_QUERY_SCRIPTS, canSubmitForm, clamp, emptyChoice, emptyCond, isAudioKind, STAT_KEYS, VAR_OPS, type ChoiceEntry, type CmdForm, type CondEntry } from './commandModel';
+import { AUDIO_KINDS, BERRY_QUERY_SCRIPTS, BOSS_EFFECTS, canSubmitForm, clamp, emptyBossMon, emptyChoice, emptyCond, isAudioKind, STAT_KEYS, VAR_OPS, type BossConfig, type ChoiceEntry, type CmdForm, type CondEntry } from './commandModel';
 import { AudioPicker, type AudioFile } from './AudioPicker';
 import { MapTilePicker } from './MapTilePicker';
 import { PicturePicker } from './PicturePicker';
@@ -114,6 +116,83 @@ const SelectField = ({ children, title }: { children: React.ReactNode; title?: s
     <SelectFieldRoot ref={ref} title={title} onPointerDownCapture={position}>
       {children}
     </SelectFieldRoot>
+  );
+};
+
+/**
+ * Shared boss config editor (HP bars, aura, boss effects) used by both the Start
+ * Boss Battle command and the boss fields of Add Creature. Aura is a small mode
+ * select plus a type picker; effects are checkboxes for the known ones plus a
+ * comma-separated field for any custom symbol the game adds.
+ */
+const BossConfigFields = ({ config, onChange }: { config: BossConfig; onChange: (config: BossConfig) => void }) => {
+  const { t } = useTranslation();
+  const auraMode = config.aura === 'none' ? 'none' : config.aura === 'default' ? 'default' : 'type';
+  const customEffects = config.effects.filter((e) => !(BOSS_EFFECTS as readonly string[]).includes(e));
+  return (
+    <>
+      <Row>
+        <Dim style={{ minWidth: 64 }}>{t('me_events_boss_bars')}</Dim>
+        <SmallInput
+          type="number"
+          min={0}
+          max={5}
+          style={{ width: 52 }}
+          value={config.bars}
+          onChange={(e) => onChange({ ...config, bars: clamp(Number(e.target.value) || 0, 0, 5) })}
+        />
+        <Dim $wrap>{t('me_events_boss_bars_hint')}</Dim>
+      </Row>
+      <Row>
+        <Dim style={{ minWidth: 64 }}>{t('me_events_boss_aura')}</Dim>
+        <SmallSelect
+          value={auraMode}
+          onChange={(e) => {
+            const mode = e.target.value;
+            if (mode === 'none') onChange({ ...config, aura: 'none' });
+            else if (mode === 'default') onChange({ ...config, aura: 'default' });
+            else onChange({ ...config, aura: auraMode === 'type' ? config.aura : '__undef__' });
+          }}
+        >
+          <option value="none">{t('me_events_boss_aura_none')}</option>
+          <option value="default">{t('me_events_boss_aura_default')}</option>
+          <option value="type">{t('me_events_boss_aura_type')}</option>
+        </SmallSelect>
+        {auraMode === 'type' && (
+          <SelectField>
+            <SelectType dbSymbol={config.aura} noLabel noneValue onChange={(v) => onChange({ ...config, aura: v })} />
+          </SelectField>
+        )}
+      </Row>
+      <CmdGroupTitle>{t('me_events_boss_effects')}</CmdGroupTitle>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px 12px', marginBottom: 6 }}>
+        {BOSS_EFFECTS.map((eff) => (
+          <CheckLabel key={eff}>
+            <Toggle
+              checked={config.effects.includes(eff)}
+              onChange={(e) =>
+                onChange({ ...config, effects: e.target.checked ? [...config.effects, eff] : config.effects.filter((x) => x !== eff) })
+              }
+            />
+            {t(`me_events_boss_effect_${eff}`)}
+          </CheckLabel>
+        ))}
+      </div>
+      <Row>
+        <Dim style={{ minWidth: 64 }}>{t('me_events_boss_effects_custom')}</Dim>
+        <SmallInput
+          type="text"
+          style={{ flex: 1, width: 'auto' }}
+          value={customEffects.join(', ')}
+          placeholder={t('me_events_boss_effects_custom_ph')}
+          onChange={(e) => {
+            const parsed = e.target.value.split(',').map((s) => s.trim()).filter(Boolean);
+            const known = config.effects.filter((x) => (BOSS_EFFECTS as readonly string[]).includes(x));
+            onChange({ ...config, effects: [...known, ...parsed] });
+          }}
+        />
+      </Row>
+    </>
   );
 };
 
@@ -579,6 +658,145 @@ export const CommandForm = ({ form, setForm, onSubmit, onCancel, systemNames, au
               {t('me_events_shiny')}
             </CheckLabel>
           </Row>
+        </>
+      )}
+      {form.kind === 'sosBattle' && (
+        <>
+          <Row>
+            <CheckLabel title={t('me_events_sos_enabled_hint')}>
+              <Toggle checked={form.sosEnabled} onChange={(e) => setForm({ ...form, sosEnabled: e.target.checked })} />
+              {t('me_events_sos_enabled')}
+            </CheckLabel>
+          </Row>
+          <Row style={{ alignItems: 'flex-start' }}>
+            <Dim $wrap style={{ minWidth: 52, paddingTop: 4 }} title={t('me_events_sos_species_hint')}>{t('me_events_sos_species')}</Dim>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, flex: 1, minWidth: 0 }}>
+              {form.sosSpecies.map((species, i) => (
+                <Row key={i}>
+                  <Dim style={{ minWidth: 20 }}>{i + 1}</Dim>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <SelectPokemon
+                      dbSymbol={species || '__undef__'}
+                      noLabel
+                      undefValueOption={t('me_events_choose')}
+                      onChange={(v) => setForm({ ...form, sosSpecies: form.sosSpecies.map((s, j) => (j === i ? v : s)) })}
+                    />
+                  </div>
+                  <OpBtn $danger onClick={() => setForm({ ...form, sosSpecies: form.sosSpecies.filter((_, j) => j !== i) })}>✕</OpBtn>
+                </Row>
+              ))}
+              <Row>
+                <OpBtn onClick={() => setForm({ ...form, sosSpecies: [...form.sosSpecies, '__undef__'] })}>+ {t('me_events_sos_add_species')}</OpBtn>
+              </Row>
+            </div>
+          </Row>
+          <Row style={{ alignItems: 'flex-start' }}>
+            <Dim $wrap style={{ minWidth: 52, paddingTop: 4 }} title={t('me_events_sos_trainers_hint')}>{t('me_events_sos_trainers')}</Dim>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, flex: 1, minWidth: 0 }}>
+              {form.sosTrainers.map((tr, i) => (
+                <Row key={i}>
+                  <Dim>{t('me_events_sos_trainer_id')}</Dim>
+                  <SmallInput
+                    type="number"
+                    min={0}
+                    value={tr.id}
+                    onChange={(e) => setForm({ ...form, sosTrainers: form.sosTrainers.map((x, j) => (j === i ? { ...x, id: Math.max(0, Number(e.target.value) || 0) } : x)) })}
+                  />
+                  <Dim>{t('me_events_sos_rate')}</Dim>
+                  <SmallInput
+                    type="number"
+                    min={0}
+                    max={100}
+                    value={tr.rate}
+                    onChange={(e) => setForm({ ...form, sosTrainers: form.sosTrainers.map((x, j) => (j === i ? { ...x, rate: clamp(Number(e.target.value) || 0, 0, 100) } : x)) })}
+                  />
+                  <Dim>%</Dim>
+                  <OpBtn $danger onClick={() => setForm({ ...form, sosTrainers: form.sosTrainers.filter((_, j) => j !== i) })}>✕</OpBtn>
+                </Row>
+              ))}
+              <Row>
+                <OpBtn onClick={() => setForm({ ...form, sosTrainers: [...form.sosTrainers, { id: 0, rate: 50 }] })}>+ {t('me_events_sos_add_trainer')}</OpBtn>
+              </Row>
+            </div>
+          </Row>
+          <Row>
+            <Dim $wrap style={{ fontStyle: 'italic' }}>{t('me_events_hint_sosBattle')}</Dim>
+          </Row>
+        </>
+      )}
+      {form.kind === 'bossBattle' && (
+        <>
+          <Row>
+            <Dim style={{ minWidth: 64 }}>{t('me_events_boss_battle_id')}</Dim>
+            <SmallInput
+              type="number"
+              min={1}
+              style={{ width: 64 }}
+              value={form.bossBattleId}
+              onChange={(e) => setForm({ ...form, bossBattleId: Math.max(1, Number(e.target.value) || 1) })}
+            />
+            <Dim $wrap>{t('me_events_boss_battle_id_hint')}</Dim>
+          </Row>
+          {form.bossMons.map((mon, i) => (
+            <React.Fragment key={i}>
+              <CmdGroupTitle>
+                {t('me_events_boss_mon_n', { n: i + 1 })}
+                {form.bossMons.length > 1 && (
+                  <OpBtn $danger style={{ marginLeft: 8 }} onClick={() => setForm({ ...form, bossMons: form.bossMons.filter((_, j) => j !== i) })}>
+                    ✕
+                  </OpBtn>
+                )}
+              </CmdGroupTitle>
+              <Row>
+                <Dim style={{ minWidth: 64 }}>{t('me_events_species')}</Dim>
+                <SelectField>
+                  <SelectPokemon
+                    dbSymbol={mon.species}
+                    noLabel
+                    undefValueOption={t('me_events_choose')}
+                    onChange={(v) => setForm({ ...form, bossMons: form.bossMons.map((x, j) => (j === i ? { ...x, species: v, form: 0 } : x)) })}
+                  />
+                </SelectField>
+              </Row>
+              <Row>
+                <Dim style={{ minWidth: 64 }}>{t('me_events_level')}</Dim>
+                <SmallInput
+                  type="number"
+                  min={1}
+                  max={100}
+                  style={{ width: 52 }}
+                  value={mon.level}
+                  onChange={(e) => setForm({ ...form, bossMons: form.bossMons.map((x, j) => (j === i ? { ...x, level: clamp(Number(e.target.value) || 1, 1, 100) } : x)) })}
+                />
+                {mon.species && mon.species !== '__undef__' && (
+                  <SelectField title={t('form')}>
+                    <SelectPokemonForm
+                      noLabel
+                      dbSymbol={mon.species}
+                      form={mon.form}
+                      onChange={(v) => setForm({ ...form, bossMons: form.bossMons.map((x, j) => (j === i ? { ...x, form: parseInt(v, 10) || 0 } : x)) })}
+                    />
+                  </SelectField>
+                )}
+                <CheckLabel>
+                  <Toggle
+                    checked={mon.shiny}
+                    onChange={(e) => setForm({ ...form, bossMons: form.bossMons.map((x, j) => (j === i ? { ...x, shiny: e.target.checked } : x)) })}
+                  />
+                  {t('me_events_shiny')}
+                </CheckLabel>
+              </Row>
+              <BossConfigFields
+                config={mon.config}
+                onChange={(config) => setForm({ ...form, bossMons: form.bossMons.map((x, j) => (j === i ? { ...x, config } : x)) })}
+              />
+            </React.Fragment>
+          ))}
+          {form.bossMons.length < 3 && (
+            <Row>
+              <OpBtn onClick={() => setForm({ ...form, bossMons: [...form.bossMons, emptyBossMon()] })}>+ {t('me_events_boss_add_mon')}</OpBtn>
+            </Row>
+          )}
         </>
       )}
       {(form.kind === 'gameOver' ||
@@ -1708,6 +1926,14 @@ export const CommandForm = ({ form, setForm, onSubmit, onCancel, systemNames, au
               ))}
             </Row>
           )}
+          <CmdGroupTitle>{t('me_events_boss_section')}</CmdGroupTitle>
+          <Row>
+            <CheckLabel title={t('me_events_boss_is_boss_hint')}>
+              <Toggle checked={form.bossEnabled} onChange={(e) => setForm({ ...form, bossEnabled: e.target.checked })} />
+              {t('me_events_boss_is_boss')}
+            </CheckLabel>
+          </Row>
+          {form.bossEnabled && <BossConfigFields config={form.bossConfig} onChange={(bossConfig) => setForm({ ...form, bossConfig })} />}
         </>
       )}
       </FormScroll>

@@ -28,7 +28,7 @@ import { useMapPage } from '@hooks/usePage';
 import { useGlobalState } from '@src/GlobalStateProvider';
 import { DarkButton, PrimaryButton } from '@components/buttons';
 import { type Brush, type HistoryEntry, type LoadedState, type MapCanvasHandle, singleBrush, type Tool, ZOOM_STEPS, DEFAULT_ZOOM, flipBrushHorizontal, flipBrushVertical, rotateBrushCw, rotateBrushCcw } from './mapEditorTypes';
-import { enforceCsvLayerData } from './tmxLayerData';
+import { saveBytes } from './saveBytes';
 import { LayerList } from './LayerList';
 import { StampsPanel, stampToBrush, normalizeTilesetKey, type Stamp } from './StampsPanel';
 import { TilesetPalette } from './TilesetPalette';
@@ -524,83 +524,6 @@ const SaveBadge = styled.span<{ $dirty: boolean }>`
   color: ${({ $dirty, theme }) => ($dirty ? theme.colors.warningBase : theme.colors.text500)};
   align-self: center;
 `;
-
-/**
- * libtiled's MapWriter computes external-tileset `source=` paths relative
- * to the map file's path. Our wasm bridge passes an empty path to
- * `writeMap(m, &buf, QString())`, so the writer falls back to MEMFS root
- * ("/"): a tileset mounted at `/Tilesets/foo.tsx` is written as
- * `source="Tilesets/foo.tsx"` instead of `source="../Tilesets/foo.tsx"`.
- *
- * The .tmx lives at `Data/Tiled/Maps/`, .tsx files at `Data/Tiled/Tilesets/`,
- * so the on-disk source needs the `..` to climb out of Maps/. Re-prepend
- * it before writing.
- *
- * (The proper fix is in the bridge — track the map's load path and pass
- * it to writeMap — but that needs another wasm rebuild. This JS post-
- * process is identical in effect and unblocks immediately.)
- */
-const fixTilesetSourcesInTmx = (bytes: Uint8Array): Uint8Array => {
-  const xml = new TextDecoder().decode(bytes);
-  let fixedCount = 0;
-  const fixed = xml.replace(
-    /(<tileset\b[^>]*?\bsource\s*=\s*["'])([^"']+)/g,
-    (full, prefix, src: string) => {
-      // Bug compensation: an earlier bridge build of `writeMap` passed the
-      // full .tmx path (including filename) instead of the parent dir, so
-      // MapWriter computed paths off-by-one and emitted `../../Tilesets/`
-      // (one extra `..`). Collapse that here so already-saved files heal
-      // on the next round-trip.
-      if (src.startsWith('../../Tilesets/') || src.startsWith('../../Assets/')) {
-        fixedCount++;
-        return `${prefix}${src.slice(3)}`; // drop one "../"
-      }
-      // libtiled may write external-tileset sources in two broken forms
-      // when no map path is passed to MapWriter:
-      //   - `Tilesets/foo.tsx`   (MEMFS root, no separator)
-      //   - `/Tilesets/foo.tsx`  (MEMFS absolute path)
-      // Both get resolved relative to the .tmx's Maps/ folder, missing
-      // the `..` climb-out to reach the sibling Tilesets/ folder.
-      //
-      // Anything already starting with `../` or `Maps/` is correct on
-      // disk — leave it alone. Absolute Windows paths (drive letters,
-      // backslashes) are exotic enough to also leave alone.
-      if (src.startsWith('../') || src.startsWith('Maps/')) return full;
-      if (/^[A-Za-z]:[\\/]/.test(src)) return full; // C:\... or C:/...
-      // Strip a leading slash if present, then climb out of Maps/.
-      const stripped = src.startsWith('/') ? src.slice(1) : src;
-      fixedCount++;
-      return `${prefix}../${stripped}`;
-    },
-  );
-  if (fixedCount > 0) {
-    console.log(`[tiled] fixTilesetSourcesInTmx: rewrote ${fixedCount} tileset source(s) to use "../" prefix`);
-  }
-  return new TextEncoder().encode(fixed);
-};
-
-const saveBytes = async (
-  projectPath: string,
-  tiledFilename: string,
-  bytes: Uint8Array,
-): Promise<{ size: number; mtime: number }> => {
-  const fixed = fixTilesetSourcesInTmx(bytes);
-  // Re-encode all <data> blocks as CSV regardless of the source .tmx's
-  // original encoding. Standardizes the on-disk format across the project
-  // (better diffs, no half-broken libtiled base64 path) and is lossless —
-  // same gids, just a different serialization. Falls back to `fixed` on
-  // any parse failure.
-  const csvBuf = await enforceCsvLayerData(
-    fixed.buffer.slice(fixed.byteOffset, fixed.byteOffset + fixed.byteLength) as ArrayBuffer,
-  );
-  return new Promise((resolve, reject) => {
-    window.api.writeMapBytes(
-      { projectPath, tiledFilename, bytes: csvBuf },
-      (payload) => resolve(payload),
-      (err) => reject(new Error(err.errorMessage)),
-    );
-  });
-};
 
 // Reusable split-button dropdown for grouping related tools (Shape →
 // rect/ellipse, Select → rect/sameTile/wand). Main button activates the

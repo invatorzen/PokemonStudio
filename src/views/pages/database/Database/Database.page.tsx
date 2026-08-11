@@ -23,6 +23,8 @@ import { DexPage } from '../Dex/Dex.page';
 import { PokemonResourcesPage } from '../Pokemon.Resources.page';
 import { TrainerResourcesPage } from '../Trainer.Resources.page';
 import { NaturePage } from '../Nature.page';
+import { GrottoPage } from '@src/custom/Grotto/Grotto.page';
+import { SwitchesVariablesPage } from '@src/custom/SwitchesVariables/SwitchesVariables.page';
 
 const DatabasePageStyle = styled.div`
   display: flex;
@@ -53,6 +55,8 @@ const DatabasePageComponent = () => {
         <Route path="trainers/resources" element={<TrainerResourcesPage />} />
         <Route path="groups" element={<GroupPage />} />
         <Route path="zones" element={<ZonePage />} />
+        <Route path="grottos" element={<GrottoPage />} />
+        <Route path="switches-variables" element={<SwitchesVariablesPage />} />
         <Route path="dex" element={<DexPage />} />
         <Route path="natures" element={<NaturePage />} />
         <Route path="/" element={<Navigate to={sessionStorage.getItem('lastDatabasePage') || 'pokemon'} />} />
