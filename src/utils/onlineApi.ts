@@ -157,3 +157,46 @@ export const enableMysteryGift = (giftId: string) => updateMysteryGift(giftId, {
 /** Player-scoped list of internet-type gifts the configured playerId can claim. */
 export const listClaimableMysteryGifts = () =>
   request('GET', '/api/v1/mystery-gift', { apiKey: true, playerId: true });
+
+// ─── GTS — admin ─────────────────────────────────────────────────────────────
+
+/** A GTS deposit from the admin endpoint (the full creature blob is included). */
+export type GtsDepositAdmin = {
+  _id: string;
+  depositorId: string;
+  depositorName: string;
+  /** Opaque PSDK creature dump. Field names come from the game, not the server. */
+  creature: Record<string, unknown>;
+  wantedSpeciesId: string;
+  wantedMinLevel: number;
+  wantedMaxLevel: number;
+  /** -1 = any gender. */
+  wantedGender: number;
+  expiresAt: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+/** Effective GTS blacklist: read-only env baseline + editable custom entries. */
+export type GtsBlacklist = {
+  envSpecies: string[];
+  customSpecies: { speciesId: string; reason?: string }[];
+};
+
+/** Admin: every active deposit (full creature) for monitoring/moderation. */
+export const listGtsDeposits = () => request('GET', '/api/v1/gts/admin/deposits', { adminKey: true });
+
+/** Admin: force-remove a deposit regardless of owner. */
+export const deleteGtsDeposit = (id: string) =>
+  request('DELETE', `/api/v1/gts/admin/deposits/${encodeURIComponent(id)}`, { adminKey: true });
+
+/** Admin: read the effective blacklist (env baseline + custom). */
+export const getGtsBlacklist = () => request('GET', '/api/v1/gts/admin/blacklist', { adminKey: true });
+
+/** Admin: add a species to the editable blacklist. */
+export const addGtsBlacklist = (speciesId: string, reason?: string) =>
+  request('POST', '/api/v1/gts/admin/blacklist', { adminKey: true }, { speciesId, ...(reason ? { reason } : {}) });
+
+/** Admin: remove a species from the editable blacklist (env entries are unaffected). */
+export const removeGtsBlacklist = (speciesId: string) =>
+  request('DELETE', `/api/v1/gts/admin/blacklist/${encodeURIComponent(speciesId)}`, { adminKey: true });

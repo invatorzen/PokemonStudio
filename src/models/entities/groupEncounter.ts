@@ -23,6 +23,33 @@ export const CONTEST_STATS_VALIDATOR = z.object({
 });
 export type StudioContestStats = z.infer<typeof CONTEST_STATS_VALIDATOR>;
 
+/**
+ * Boss configuration (cc-pokemon-boss-system). Read by a Ruby patch off the
+ * party creature. `bars` is the number of extra HP gauges (0 = a normal single
+ * gauge). `aura` is `'none'`, `'default'` (crimson) or a type db_symbol.
+ * `effects` are boss-effect db_symbols. Kept lenient (plain strings) like
+ * `nature`, since the valid symbol set lives in the project, not the schema.
+ */
+export const BOSS_SETUP_VALIDATOR = z.object({
+  bars: POSITIVE_OR_ZERO_INT,
+  aura: z.string(),
+  effects: z.array(z.string()),
+});
+export type StudioBossSetup = z.infer<typeof BOSS_SETUP_VALIDATOR>;
+
+/**
+ * Shadow configuration (cc-shadow-pokemon-system). `heartGauge` is the shadow
+ * heart-gauge max (0 = auto/omit), `temper` the temper / decay speed
+ * (0 = auto/omit), `moves` a list of move db_symbols (empty = default shadow
+ * moveset).
+ */
+export const SHADOW_SETUP_VALIDATOR = z.object({
+  heartGauge: POSITIVE_OR_ZERO_INT,
+  temper: POSITIVE_OR_ZERO_INT,
+  moves: z.array(z.string()),
+});
+export type StudioShadowSetup = z.infer<typeof SHADOW_SETUP_VALIDATOR>;
+
 const EXPAND_POKEMON_SETUP_VALIDATOR = z.discriminatedUnion('type', [
   z.object({ type: z.literal('givenName'), value: z.string() }),
   z.object({ type: z.literal('caughtWith'), value: DB_SYMBOL_VALIDATOR }),
@@ -38,6 +65,8 @@ const EXPAND_POKEMON_SETUP_VALIDATOR = z.discriminatedUnion('type', [
   z.object({ type: z.literal('moves'), value: z.array(DB_SYMBOL_VALIDATOR) }),
   z.object({ type: z.literal('originalTrainerName'), value: z.string() }),
   z.object({ type: z.literal('originalTrainerId'), value: z.number().finite() }),
+  z.object({ type: z.literal('boss'), value: BOSS_SETUP_VALIDATOR }),
+  z.object({ type: z.literal('shadow'), value: SHADOW_SETUP_VALIDATOR }),
 ]);
 export type StudioExpandPokemonSetup = z.infer<typeof EXPAND_POKEMON_SETUP_VALIDATOR>;
 
@@ -95,6 +124,10 @@ export const createExpandPokemonSetup = (type: StudioExpandPokemonSetup['type'])
       return { type: type, value: '__undef__' as DbSymbol };
     case 'originalTrainerId':
       return { type: type, value: 0 };
+    case 'boss':
+      return { type: type, value: { bars: 1, aura: 'none', effects: [] } };
+    case 'shadow':
+      return { type: type, value: { heartGauge: 0, temper: 0, moves: [] } };
     case 'rareness':
       return { type: type, value: -1 };
     default:

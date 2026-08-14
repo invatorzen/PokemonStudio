@@ -4,16 +4,13 @@ import { NavigationDatabaseGroup } from '@components/database/navigation/Navigat
 import { NavigationDatabaseItem } from '@components/database/navigation/NavigationDatabaseItem';
 import { useTranslation } from 'react-i18next';
 
-export const OnlineNavigation = () => {
+export const OutfitsNavigation = () => {
   const { t } = useTranslation();
   return (
     <NavigationDatabaseStyle>
-      <NavigationDatabaseGroup title={t('online_section_management')}>
-        <NavigationDatabaseItem path="/online/mystery-gift" label={t('online_mystery_gift')} />
-        <NavigationDatabaseItem path="/online/gts" label={t('gts_title')} />
-      </NavigationDatabaseGroup>
-      <NavigationDatabaseGroup title={t('online_section_configuration')}>
-        <NavigationDatabaseItem path="/online/settings" label={t('online_settings')} />
+      <NavigationDatabaseGroup title={t('outfits_section_configuration')}>
+        <NavigationDatabaseItem path="/outfits/settings" label={t('outfits_settings')} />
+        <NavigationDatabaseItem path="/outfits/list" label={t('outfits_list')} />
       </NavigationDatabaseGroup>
     </NavigationDatabaseStyle>
   );

@@ -2,7 +2,7 @@ import { PokemonBattlerFrom } from '@components/pokemonBattler/editors/PokemonBa
 import { StudioDisplayConfig, StudioSaveConfig, StudioSettingConfig, StudioTextConfig } from '@modelEntities/config';
 import { StudioCreatureForm } from '@modelEntities/creature';
 import { StudioGroup } from '@modelEntities/group';
-import { StudioExpandPokemonSetup, StudioGroupEncounter, StudioIvEv } from '@modelEntities/groupEncounter';
+import { StudioBossSetup, StudioExpandPokemonSetup, StudioGroupEncounter, StudioIvEv, StudioShadowSetup } from '@modelEntities/groupEncounter';
 import { StudioItem } from '@modelEntities/item';
 import { StudioMove } from '@modelEntities/move';
 import { StudioTrainer } from '@modelEntities/trainer';
@@ -156,8 +156,24 @@ const cleanNanValueEncounter = (encounter: StudioGroupEncounter) => {
   if (rareness) rareness.value = cleanNaNValue(rareness.value as number, -1);
 };
 
+// Boss effects and shadow moves are edited through selects that use '__undef__'
+// as their "no selection" sentinel; drop those so only real db_symbols persist.
+const cleanBossShadowSymbols = (encounter: StudioGroupEncounter) => {
+  const boss = encounter.expandPokemonSetup.find((eps) => eps.type === 'boss');
+  if (boss) {
+    const value = boss.value as StudioBossSetup;
+    value.effects = value.effects.filter((effect) => effect && effect !== '__undef__');
+  }
+  const shadow = encounter.expandPokemonSetup.find((eps) => eps.type === 'shadow');
+  if (shadow) {
+    const value = shadow.value as StudioShadowSetup;
+    value.moves = value.moves.filter((move) => move && move !== '__undef__');
+  }
+};
+
 export const cleanExpandPokemonSetup = (encounter: StudioGroupEncounter, species: ProjectData['pokemon'], from: PokemonBattlerFrom, state: State) => {
   cleanNanValueEncounter(encounter);
+  cleanBossShadowSymbols(encounter);
   removeExpandPokemonSetupWithCondition(encounter, 'ability', '__undef__');
   removeExpandPokemonSetupWithCondition(encounter, 'nature', '__undef__');
   removeExpandPokemonSetupWithCondition(encounter, 'itemHeld', '__undef__');

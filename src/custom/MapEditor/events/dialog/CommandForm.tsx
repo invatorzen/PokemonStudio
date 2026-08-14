@@ -1334,6 +1334,54 @@ export const CommandForm = ({ form, setForm, onSubmit, onCancel, systemNames, au
           <Dim $wrap style={{ fontStyle: 'italic' }}>{t('me_events_berry_hint')}</Dim>
         </>
       )}
+      {form.kind === 'purifyPokemon' && (
+        <>
+          <Row>
+            <Dim>{t('me_events_purify_slot')}</Dim>
+            <SmallInput
+              type="number"
+              min={0}
+              max={5}
+              value={form.purifyIndex}
+              onChange={(e) => setForm({ ...form, purifyIndex: clamp(Number(e.target.value) || 0, 0, 5) })}
+            />
+            <Dim>{t('me_events_purify_num_char')}</Dim>
+            <SmallInput
+              type="number"
+              min={1}
+              value={form.purifyNumChar}
+              onChange={(e) => setForm({ ...form, purifyNumChar: Math.max(1, Number(e.target.value) || 1) })}
+            />
+          </Row>
+          <Dim $wrap style={{ fontStyle: 'italic' }}>{t('me_events_hint_purifyPokemon')}</Dim>
+        </>
+      )}
+      {form.kind === 'purificationMenu' && (
+        <>
+          <Row>
+            <CheckLabel title={t('me_events_purify_menu_default_var_hint')}>
+              <Toggle checked={form.purifyMenuDefaultVar} onChange={(e) => setForm({ ...form, purifyMenuDefaultVar: e.target.checked })} />
+              {t('me_events_purify_menu_default_var')}
+            </CheckLabel>
+          </Row>
+          {!form.purifyMenuDefaultVar && (
+            <Row>
+              <Dim>{t('me_events_purify_menu_store')}</Dim>
+              <NamePicker names={systemNames.variables} value={form.id} onChange={(v) => setForm({ ...form, id: v })} />
+            </Row>
+          )}
+          <Row>
+            <Dim>{t('me_events_purify_num_char')}</Dim>
+            <SmallInput
+              type="number"
+              min={1}
+              value={form.purifyNumChar}
+              onChange={(e) => setForm({ ...form, purifyNumChar: Math.max(1, Number(e.target.value) || 1) })}
+            />
+          </Row>
+          <Dim $wrap style={{ fontStyle: 'italic' }}>{t('me_events_hint_purificationMenu')}</Dim>
+        </>
+      )}
       {form.kind === 'selectParty' && (
         <Row>
           <Dim>{t('me_events_select_party_store')}</Dim>
@@ -1934,6 +1982,26 @@ export const CommandForm = ({ form, setForm, onSubmit, onCancel, systemNames, au
             </CheckLabel>
           </Row>
           {form.bossEnabled && <BossConfigFields config={form.bossConfig} onChange={(bossConfig) => setForm({ ...form, bossConfig })} />}
+          <CmdGroupTitle>{t('me_events_shadow_section')}</CmdGroupTitle>
+          <Row>
+            <CheckLabel title={t('me_events_shadow_is_shadow_hint')}>
+              <Toggle checked={form.shadowEnabled} onChange={(e) => setForm({ ...form, shadowEnabled: e.target.checked })} />
+              {t('me_events_shadow_is_shadow')}
+            </CheckLabel>
+          </Row>
+          {form.shadowEnabled && (
+            <Row>
+              <Dim style={{ minWidth: 64 }}>{t('me_events_shadow_heart_gauge')}</Dim>
+              <SmallInput
+                type="number"
+                min={0}
+                style={{ width: 64 }}
+                value={form.heartGauge}
+                onChange={(e) => setForm({ ...form, heartGauge: Math.max(0, Number(e.target.value) || 0) })}
+              />
+              <Dim $wrap>{t('me_events_shadow_heart_gauge_hint')}</Dim>
+            </Row>
+          )}
         </>
       )}
       </FormScroll>

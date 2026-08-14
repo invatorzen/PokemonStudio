@@ -23,6 +23,7 @@ import { ConfirmDeleteDialog } from '@src/custom/MapEditor/ConfirmDeleteDialog';
 import { flushGrottoSave, getGrottoPending, subscribeGrottoPending } from '@src/custom/Grotto/grottoPendingSave';
 import { flushSosSave, getSosPending, subscribeSosPending } from '@src/custom/SOS/sosPendingSave';
 import { flushSwitchesVariablesSave, getSwitchesVariablesPending, subscribeSwitchesVariablesPending } from '@src/custom/SwitchesVariables/switchesVariablesPendingSave';
+import { flushOutfitSave, getOutfitPending, subscribeOutfitPending } from '@src/custom/Outfits/outfitPendingSave';
 import { useProjectMaps } from '@hooks/useProjectData';
 import { useGlobalState } from '@src/GlobalStateProvider';
 import { playSound } from '@utils/sound';
@@ -187,6 +188,8 @@ export const SaveProjectButton = () => {
   const sosPending = useSyncExternalStore(subscribeSosPending, getSosPending);
   // Unsaved switch/variable name edits (System.rxdata), same parking pattern.
   const svPending = useSyncExternalStore(subscribeSwitchesVariablesPending, getSwitchesVariablesPending);
+  // Unsaved Easy Outfits config, parked identically so it rides the same button.
+  const outfitPending = useSyncExternalStore(subscribeOutfitPending, getOutfitPending);
   const [closeGuard, setCloseGuard] = useState(false);
 
   // Let the map editor's save dialog reach the project pipeline: writing map
@@ -217,6 +220,7 @@ export const SaveProjectButton = () => {
       await flushGrottoSave();
       await flushSosSave();
       await flushSwitchesVariablesSave();
+      await flushOutfitSave();
     } catch (error) {
       loaderRef.current.setError('saving_project_error', error instanceof Error ? error.message : String(error));
       return;
@@ -284,7 +288,7 @@ export const SaveProjectButton = () => {
   };
 
   // Grotto and SOS configs count as project data — they save via "Save data", never maps/events.
-  const dataToSave = isDataToSave || !!grottoPending || !!sosPending || !!svPending;
+  const dataToSave = isDataToSave || !!grottoPending || !!sosPending || !!svPending || !!outfitPending;
   // `mapTargets` only exists while the map editor is mounted, so relying on it
   // alone made the unsaved dot vanish the moment you left for another section.
   // The parked edits (tiles serialized on teardown, events parked on edit) live
@@ -294,7 +298,7 @@ export const SaveProjectButton = () => {
 
   const shortcutMap = useMemo<StudioShortcutActions>(() => {
     // No shortcut if an editor is opened and no data to save (grotto counts).
-    const isShortcutEnabled = () => !document.querySelector('#dialogs')?.textContent && (isDataToSave || !!getGrottoPending() || !!getSosPending() || !!getSwitchesVariablesPending());
+    const isShortcutEnabled = () => !document.querySelector('#dialogs')?.textContent && (isDataToSave || !!getGrottoPending() || !!getSosPending() || !!getSwitchesVariablesPending() || !!getOutfitPending());
     return {
       save: () => {
         // Fork-specific: the map editor route claims Ctrl+S while mounted so

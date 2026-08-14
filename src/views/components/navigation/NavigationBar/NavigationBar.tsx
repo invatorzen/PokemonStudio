@@ -48,6 +48,9 @@ export const NavigationBarComponent = () => {
           <NavigationBarItem path="/online" onMouseLeave={onMouseLeave} onMouseEnter={buildOnMouseEnter(t('online_section'), 'right-center', true)}>
             <BaseIcon color={theme.colors.navigationIconColor} size="s" icon="online" />
           </NavigationBarItem>
+          <NavigationBarItem path="/outfits" onMouseLeave={onMouseLeave} onMouseEnter={buildOnMouseEnter(t('outfits_section'), 'right-center', true)}>
+            <BaseIcon color={theme.colors.navigationIconColor} size="s" icon="outfit" />
+          </NavigationBarItem>
           {window.api.isDev && (
             <NavigationBarItem path="/poc" onMouseLeave={onMouseLeave} onMouseEnter={buildOnMouseEnter('Proof of concept', 'right-center', true)}>
               <BaseIcon color={theme.colors.navigationIconColor} size="s" icon="poc" />

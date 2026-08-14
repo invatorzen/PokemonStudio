@@ -53,6 +53,12 @@ import type {
   WriteHiddenGrottoInput,
   WriteHiddenGrottoOutput,
 } from './backendTasks/hiddenGrotto';
+import type {
+  ReadOutfitConfigInput,
+  ReadOutfitConfigOutput,
+  SaveOutfitConfigInput,
+  SaveOutfitConfigOutput,
+} from './backendTasks/outfitConfig';
 import type { ReadSosBattleInput, ReadSosBattleOutput, WriteSosBattleInput, WriteSosBattleOutput } from './backendTasks/sosBattle';
 import type { ApplyDataPackInput, ApplyDataPackOutput, CheckDataPackEnvOutput } from './backendTasks/applyDataPack';
 import type { WriteRMXPSwitchNamesInput, WriteRMXPSwitchNamesOutput } from './backendTasks/writeRMXPSwitchNames';
@@ -190,6 +196,8 @@ contextBridge.exposeInMainWorld('api', {
   onlineHttpRequest: defineBackendTask(ipcRenderer, 'online-http-request'),
   readHiddenGrotto: defineBackendTask(ipcRenderer, 'read-hidden-grotto'),
   writeHiddenGrotto: defineBackendTask(ipcRenderer, 'write-hidden-grotto'),
+  readOutfitConfig: defineBackendTask(ipcRenderer, 'read-outfit-config'),
+  saveOutfitConfig: defineBackendTask(ipcRenderer, 'save-outfit-config'),
   readSosBattle: defineBackendTask(ipcRenderer, 'read-sos-battle'),
   writeSosBattle: defineBackendTask(ipcRenderer, 'write-sos-battle'),
   applyDataPack: defineBackendTask(ipcRenderer, 'apply-data-pack'),
@@ -310,6 +318,8 @@ declare global {
       onlineHttpRequest: BackendTaskWithGenericErrorAndNoProgress<OnlineHttpRequestInput, OnlineHttpRequestOutput>;
       readHiddenGrotto: BackendTaskWithGenericErrorAndNoProgress<ReadHiddenGrottoInput, ReadHiddenGrottoOutput>;
       writeHiddenGrotto: BackendTaskWithGenericErrorAndNoProgress<WriteHiddenGrottoInput, WriteHiddenGrottoOutput>;
+      readOutfitConfig: BackendTaskWithGenericErrorAndNoProgress<ReadOutfitConfigInput, ReadOutfitConfigOutput>;
+      saveOutfitConfig: BackendTaskWithGenericErrorAndNoProgress<SaveOutfitConfigInput, SaveOutfitConfigOutput>;
       readSosBattle: BackendTaskWithGenericErrorAndNoProgress<ReadSosBattleInput, ReadSosBattleOutput>;
       writeSosBattle: BackendTaskWithGenericErrorAndNoProgress<WriteSosBattleInput, WriteSosBattleOutput>;
       applyDataPack: BackendTaskWithGenericErrorAndNoProgress<ApplyDataPackInput, ApplyDataPackOutput>;

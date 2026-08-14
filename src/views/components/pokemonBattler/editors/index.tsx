@@ -7,3 +7,5 @@ export { PokemonBattlerMoveEditor } from './PokemonBattlerMoveEditor';
 export { PokemonBattlerStatsEditor } from './PokemonBattlerStatsEditor';
 export { PokemonBattlerContestStatsEditor } from './PokemonBattlerContestStatsEditor';
 export { PokemonBattlerMoreInfoEditor } from './PokemonBattlerMoreInfoEditor';
+export { PokemonBattlerBossEditor } from './PokemonBattlerBossEditor';
+export { PokemonBattlerShadowEditor } from './PokemonBattlerShadowEditor';

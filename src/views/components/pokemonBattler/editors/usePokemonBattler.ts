@@ -4,10 +4,12 @@ import { useGroupPage, useQuestPage, useTrainerPage } from '@hooks/usePage';
 import { useProjectPokemon } from '@hooks/useProjectData';
 import { useEffect, useMemo, useState } from 'react';
 import {
+  StudioBossSetup,
   StudioContestStats,
   StudioExpandPokemonSetup,
   StudioGroupEncounter,
   StudioIvEv,
+  StudioShadowSetup,
   createExpandPokemonSetup,
 } from '@modelEntities/groupEncounter';
 import { DbSymbol } from '@modelEntities/dbSymbol';
@@ -19,7 +21,21 @@ import { createEncounter } from '@utils/entityCreation';
 import { useGetEntityNameText } from '@utils/ReadingProjectText';
 import { CurrentBattlerType, PokemonBattlerFrom } from './PokemonBattlerEditorOverlay';
 
-type RecordExpandPokemonSetupValue = number | string | DbSymbol | DbSymbol[] | StudioIvEv | StudioContestStats;
+// Boss/Shadow are opt-in: their key is simply absent from the record unless the
+// creature is flagged as one. `Partial<RecordExpandPokemonSetup>` still lets
+// callers pass `undefined` to clear a key (see updateExpandPokemonSetup), and
+// buildExpandPokemonSetup drops any undefined-valued key before persisting — so
+// the value union itself stays non-undefined to keep the always-present keys
+// (gender, rareness, …) narrow for their existing consumers.
+type RecordExpandPokemonSetupValue =
+  | number
+  | string
+  | DbSymbol
+  | DbSymbol[]
+  | StudioIvEv
+  | StudioContestStats
+  | StudioBossSetup
+  | StudioShadowSetup;
 export type RecordExpandPokemonSetup = Record<StudioExpandPokemonSetup['type'], RecordExpandPokemonSetupValue>;
 
 const createOptionalExpandPokemonSetup = (encounter: StudioGroupEncounter) => {
@@ -45,10 +61,14 @@ const createRecordExpandPokemonSetup = (encounter: StudioGroupEncounter, creatur
 
 const buildExpandPokemonSetup = (record: RecordExpandPokemonSetup): StudioExpandPokemonSetup[] => {
   const keys = Object.keys(record) as (keyof RecordExpandPokemonSetup)[];
-  return keys.map((key) => ({
-    type: key,
-    value: record[key],
-  })) as StudioExpandPokemonSetup[];
+  // Opt-in entries (boss/shadow) sit in the record as `undefined` when unset;
+  // dropping them here keeps them out of the persisted array entirely.
+  return keys
+    .filter((key) => record[key] !== undefined)
+    .map((key) => ({
+      type: key,
+      value: record[key],
+    })) as StudioExpandPokemonSetup[];
 };
 
 const notBetween = (value: number, min: number, max: number) => value < min || value > max;

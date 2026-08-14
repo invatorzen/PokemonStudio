@@ -20,7 +20,14 @@ import { SelectPokemonForm } from '@components/selects/SelectPokemonForm';
 import { StudioEncounterLevelMinMax } from '@modelEntities/groupEncounter';
 import { SelectAbility } from '@components/selects';
 import { SelectNature } from '@components/selects/SelectNature';
-import { PokemonBattlerMoreInfoEditor, PokemonBattlerMoveEditor, PokemonBattlerStatsEditor, PokemonBattlerContestStatsEditor } from '.';
+import {
+  PokemonBattlerMoreInfoEditor,
+  PokemonBattlerMoveEditor,
+  PokemonBattlerStatsEditor,
+  PokemonBattlerContestStatsEditor,
+  PokemonBattlerBossEditor,
+  PokemonBattlerShadowEditor,
+} from '.';
 import { EmbeddedUnitInputNumber, InputNumber } from './InputNumber';
 import { TextInputError } from '@components/inputs/Input';
 import { TooltipWrapper } from '@ds/Tooltip';
@@ -230,6 +237,16 @@ export const PokemonBattlerEditor = forwardRef<EditorHandlingClose, PokemonBattl
                   />
                 )}
                 <PokemonBattlerContestStatsEditor expandPokemonSetup={expandPokemonSetup} updateExpandPokemonSetup={updateExpandPokemonSetup} />
+                <PokemonBattlerBossEditor
+                  expandPokemonSetup={expandPokemonSetup}
+                  updateExpandPokemonSetup={updateExpandPokemonSetup}
+                  collapseByDefault={false}
+                />
+                <PokemonBattlerShadowEditor
+                  expandPokemonSetup={expandPokemonSetup}
+                  updateExpandPokemonSetup={updateExpandPokemonSetup}
+                  collapseByDefault={false}
+                />
               </InputContainer>
             </>
           )}

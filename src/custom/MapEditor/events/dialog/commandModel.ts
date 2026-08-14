@@ -32,6 +32,7 @@ export type CmdFormKind =
   | 'changeFog' | 'changeFogOpacity' | 'weather' | 'changePanorama' | 'changeBattleback' | 'rotatePicture'
   | 'exitEvent' | 'setEventLocation' | 'controlTimer' | 'inputNumber' | 'buttonInput'
   | 'changeSaveAccess' | 'changeEncounter' | 'trainerBattle' | 'wildBattle' | 'sosBattle' | 'bossBattle'
+  | 'purifyPokemon' | 'purificationMenu'
   | 'gameOver' | 'callMenu' | 'callSave' | 'textOptions' | 'windowskin' | 'battleEndMe'
   | 'healParty' | 'learnMove' | 'forgetMove' | 'selectParty' | 'berryTree' | 'mapOverlay' | 'mapOverlaySet'
   | 'berryTake' | 'berryWater' | 'berryPlant' | 'berryInteraction';
@@ -217,6 +218,26 @@ export type CmdForm = {
   bossConfig: BossConfig;
   bossBattleId: number;
   bossMons: BossMon[];
+  /**
+   * Shadow system (cc-shadow-pokemon-system). `shadowEnabled` + `heartGauge` turn
+   * an Add Creature into a Shadow Pokémon (opts forwarded through
+   * add_specific_pokemon: `shadow: true`, and `heart_gauge:` only when > 0 —
+   * 0 lets the plugin pick the species' automatic gauge).
+   */
+  shadowEnabled: boolean;
+  heartGauge: number;
+  /**
+   * Purify Pokémon / Open Purification Menu (cc-shadow-pokemon-system).
+   *  - `purifyIndex`: the party slot (0–5) purify_pokemon acts on.
+   *  - `purifyNumChar`: the max nickname length, shared by both commands (12 is
+   *    the Ruby default, emitted terse when unchanged).
+   *  - `purifyMenuDefaultVar`: keep purification_menu's id_var at its
+   *    ::Yuki::Var::Party_Menu_Sel default. When off, the chosen game-variable id
+   *    reuses the shared `id` field.
+   */
+  purifyIndex: number;
+  purifyNumChar: number;
+  purifyMenuDefaultVar: boolean;
   /** Change Text Options (104): message position 0 top/1 middle/2 bottom, frame 0 normal/1 dim. */
   textPosition: number;
   textFrame: number;
@@ -410,6 +431,8 @@ export const emptyForm = (kind: CmdFormKind, mode: 'insert' | 'edit'): CmdForm =
   trainerId: 1, trainerBgm: '__undef__', trainerTroop: 3,
   sosEnabled: true, sosSpecies: [], sosTrainers: [],
   bossEnabled: false, bossConfig: emptyBossConfig(), bossBattleId: 1, bossMons: [emptyBossMon()],
+  shadowEnabled: false, heartGauge: 0,
+  purifyIndex: 0, purifyNumChar: 12, purifyMenuDefaultVar: true,
   textPosition: 2, textFrame: 0,
   windowskinName: '__undef__',
   moveByVar: true, movePartyIndex: 1, moveSkill: '__undef__',
@@ -565,6 +588,10 @@ export const buildCommandsFromForm = (form: CmdForm, indent: number): WorkingCom
       return buildTextChain(355, buildSosBattleScript(form), indent);
     case 'bossBattle':
       return buildTextChain(355, buildBossBattleScript(form), indent);
+    case 'purifyPokemon':
+      return buildTextChain(355, buildPurifyPokemonScript(form), indent);
+    case 'purificationMenu':
+      return buildTextChain(355, buildPurificationMenuScript(form), indent);
     case 'weather':
       // command_236: $game_screen.weather(type, power, duration).
       return [{ code: 236, indent, parameters: [form.weatherType, Math.max(0, form.weatherPower), Math.max(0, form.weatherDuration)] }];
@@ -792,7 +819,8 @@ const bossOptParts = (cfg: BossConfig): string[] => {
 const buildCreatureScript = (form: CmdForm): string => {
   const moves = form.moves.filter((m) => m && m !== '__undef__');
   const hasNature = !!form.nature && form.nature !== '__undef__';
-  const customized = form.nickname.trim() !== '' || hasNature || moves.length > 0 || form.customIvs || form.customEvs || form.bossEnabled;
+  const customized =
+    form.nickname.trim() !== '' || hasNature || moves.length > 0 || form.customIvs || form.customEvs || form.bossEnabled || form.shadowEnabled;
   if (!customized) return `add_pokemon(:${form.species}, ${form.level}${form.shiny ? ', true' : ''})`;
 
   const parts = [`id: :${form.species}`, `level: ${form.level}`];
@@ -803,7 +831,19 @@ const buildCreatureScript = (form: CmdForm): string => {
   if (form.customIvs) parts.push(`stats: [${form.ivs.join(', ')}]`);
   if (form.customEvs) parts.push(`bonus: [${form.evs.join(', ')}]`);
   if (form.bossEnabled) parts.push(...bossOptParts(form.bossConfig));
+  if (form.shadowEnabled) parts.push(...shadowOptParts(form));
   return `add_specific_pokemon({ ${parts.join(', ')} })`;
+};
+
+/**
+ * The shadow opts a PFM::Pokemon hash carries, read by the cc-shadow-pokemon-system
+ * Initialize patch (`opts[:shadow]`, `:heart_gauge`). A heart gauge of 0 is dropped
+ * so the plugin falls back to the species' automatic value.
+ */
+const shadowOptParts = (form: CmdForm): string[] => {
+  const parts = ['shadow: true'];
+  if (form.heartGauge > 0) parts.push(`heart_gauge: ${form.heartGauge}`);
+  return parts;
 };
 
 /**
@@ -1591,6 +1631,50 @@ const sosFormFromScript = (script: string): CmdForm | null => {
   return form;
 };
 
+// Purify Pokémon / Open Purification Menu → the cc-shadow-pokemon-system
+// interpreter calls. num_char (max nickname length) defaults to 12, so it's only
+// emitted when changed; purification_menu's id_var defaults to the plugin's
+// ::Yuki::Var::Party_Menu_Sel and is dropped when left at that default.
+const PURIFY_DEFAULT_NUM_CHAR = 12;
+const PURIFY_MENU_DEFAULT_VAR = '::Yuki::Var::Party_Menu_Sel';
+
+const buildPurifyPokemonScript = (form: CmdForm): string => {
+  const index = clamp(form.purifyIndex, 0, 5);
+  return form.purifyNumChar === PURIFY_DEFAULT_NUM_CHAR
+    ? `purify_pokemon(${index})`
+    : `purify_pokemon(${index}, ${form.purifyNumChar})`;
+};
+const PURIFY_POKEMON_RE = /^purify_pokemon\((\d+)(?:,\s*(\d+))?\)$/;
+const purifyPokemonFormFromScript = (script: string): CmdForm | null => {
+  const m = script.match(PURIFY_POKEMON_RE);
+  if (!m) return null;
+  const form = emptyForm('purifyPokemon', 'edit');
+  form.purifyIndex = clamp(Number(m[1]), 0, 5);
+  form.purifyNumChar = m[2] === undefined ? PURIFY_DEFAULT_NUM_CHAR : Number(m[2]);
+  return form;
+};
+
+const buildPurificationMenuScript = (form: CmdForm): string => {
+  const numCharDefault = form.purifyNumChar === PURIFY_DEFAULT_NUM_CHAR;
+  if (form.purifyMenuDefaultVar && numCharDefault) return 'purification_menu';
+  const idVar = form.purifyMenuDefaultVar ? PURIFY_MENU_DEFAULT_VAR : String(form.id);
+  return numCharDefault ? `purification_menu(${idVar})` : `purification_menu(${idVar}, ${form.purifyNumChar})`;
+};
+const PURIFICATION_MENU_RE = /^purification_menu(?:\((::Yuki::Var::Party_Menu_Sel|\d+)(?:,\s*(\d+))?\))?$/;
+const purificationMenuFormFromScript = (script: string): CmdForm | null => {
+  const m = script.match(PURIFICATION_MENU_RE);
+  if (!m) return null;
+  const form = emptyForm('purificationMenu', 'edit');
+  if (m[1] === undefined || m[1] === PURIFY_MENU_DEFAULT_VAR) {
+    form.purifyMenuDefaultVar = true;
+  } else {
+    form.purifyMenuDefaultVar = false;
+    form.id = Number(m[1]);
+  }
+  form.purifyNumChar = m[2] === undefined ? PURIFY_DEFAULT_NUM_CHAR : Number(m[2]);
+  return form;
+};
+
 const MONEY_SET_RE = /^\$pokemon_party\.money\s*=\s*(?:\$game_variables\[(\d+)\]|(\d+))$/;
 const moneyFormFromScript = (script: string): CmdForm | null => {
   const m = script.match(MONEY_SET_RE);
@@ -1694,13 +1778,18 @@ const creatureFormFromScript = (script: string): CmdForm | null => {
     form.bossEnabled = true;
     form.bossConfig = bossConfigFromBody(body);
   }
+  if (/(?:^|,)\s*shadow:\s*true/.test(body)) {
+    form.shadowEnabled = true;
+    const heart = body.match(/(?:^|,)\s*heart_gauge:\s*(\d+)/);
+    if (heart) form.heartGauge = Number(heart[1]);
+  }
   return form;
 };
 
 /** A script command that's really an Add Item / Add Creature, or null. */
 const structuredScriptForm = (script: string): CmdForm | null => {
   const trimmed = script.trim();
-  return itemFormFromScript(trimmed) ?? creatureFormFromScript(trimmed) ?? waitFormFromScript(trimmed) ?? moneyFormFromScript(trimmed) ?? trainerFormFromScript(trimmed) ?? wildFormFromScript(trimmed) ?? sosFormFromScript(trimmed) ?? bossFormFromScript(trimmed) ?? gameplayFormFromScript(trimmed);
+  return itemFormFromScript(trimmed) ?? creatureFormFromScript(trimmed) ?? waitFormFromScript(trimmed) ?? moneyFormFromScript(trimmed) ?? trainerFormFromScript(trimmed) ?? wildFormFromScript(trimmed) ?? sosFormFromScript(trimmed) ?? bossFormFromScript(trimmed) ?? purifyPokemonFormFromScript(trimmed) ?? purificationMenuFormFromScript(trimmed) ?? gameplayFormFromScript(trimmed);
 };
 
 export const formFromChain = (chain: { entries: WorkingCommand[] }, isCsvFile?: IsCsvFile): CmdForm | null => {

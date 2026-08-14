@@ -460,7 +460,7 @@ export const CommandListEditor = ({ list, setList, systemNames, mapEvents, subje
     { key: 'screen', kinds: ['tintScreen', 'screenFlash', 'weather', 'changeFog', 'fogTone', 'changeFogOpacity', 'mapOverlay', 'mapOverlaySet', 'changePanorama', 'changeBattleback', 'showPicture', 'movePicture', 'rotatePicture', 'erasePicture', 'pictureTone', 'screenShake', 'scrollMap', 'prepareTransition', 'executeTransition'] },
     { key: 'game', kinds: ['changeGold', 'transparent', 'eraseEvent', 'menuAccess', 'changeSaveAccess', 'changeEncounter', 'controlTimer', 'textOptions', 'windowskin', 'callMenu', 'callSave', 'gameOver', 'returnToTitle'] },
     { key: 'audio', kinds: ['playSe', 'playMe', 'playBgm', 'playBgs', 'fadeBgm', 'fadeBgs', 'stopSe', 'memorizeBgm', 'restoreBgm', 'battleBgm', 'battleEndMe'] },
-    { key: 'party', kinds: ['creature', 'item', 'berryTree', 'berryTake', 'berryWater', 'berryPlant', 'berryInteraction', 'trainerBattle', 'wildBattle', 'sosBattle', 'bossBattle', 'healParty', 'learnMove', 'forgetMove', 'selectParty'] },
+    { key: 'party', kinds: ['creature', 'item', 'berryTree', 'berryTake', 'berryWater', 'berryPlant', 'berryInteraction', 'trainerBattle', 'wildBattle', 'sosBattle', 'bossBattle', 'purifyPokemon', 'purificationMenu', 'healParty', 'learnMove', 'forgetMove', 'selectParty'] },
     { key: 'data', kinds: ['switch', 'variable', 'selfSwitch', 'inputNumber', 'buttonInput'] },
     { key: 'other', kinds: ['wait', 'script'] },
   ];

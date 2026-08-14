@@ -3,6 +3,7 @@ import { Navigate, Route, Routes } from 'react-router-dom';
 import { OnlineNavigation } from '@components/online';
 import { PageWithMenu, PageWithMenuProps } from '@components/pages';
 import { OnlineMysteryGiftPage } from './Online.MysteryGift.page';
+import { OnlineGtsPage } from './Online.Gts.page';
 import { OnlineSettingsPage } from './Online.Settings.page';
 
 const OnlinePageWithMenu = ({ children }: Omit<PageWithMenuProps, 'navigation'>) => (
@@ -18,6 +19,14 @@ const OnlineRouterComponent = () => {
         element={
           <OnlinePageWithMenu>
             <OnlineMysteryGiftPage />
+          </OnlinePageWithMenu>
+        }
+      />
+      <Route
+        path="gts"
+        element={
+          <OnlinePageWithMenu>
+            <OnlineGtsPage />
           </OnlinePageWithMenu>
         }
       />
