@@ -10,6 +10,7 @@ import { useMapPage } from '@hooks/usePage';
 import { MapEditorOverlay } from '@components/world/map/editors';
 import { MapEditorAndDeletionKeys } from '@components/world/map/editors/MapEditorOverlay';
 import { MapBreadcrumb, MapEmptyState, MapFrame, MapMusics } from '@components/world/map';
+import { MapSettings } from '@src/custom/MapSettings/MapSettings';
 import { DeleteButtonWithIcon, SecondaryButton } from '@components/buttons';
 import { BaseIcon } from '@components/icons/BaseIcon';
 import theme from '@src/AppTheme';
@@ -91,6 +92,7 @@ export const MapPage = () => {
                 updateDisabled={tiledPathMissing}
               />
               <MapMusics map={map} dialogsRef={dialogsRef} disabled={false} />
+              <MapSettings map={map} />
             </DataBlockWrapper>
             <DataBlockWrapper>
               <DataBlockWithAction size="full" title={t('edition')} disabled={disabledOpenTiled}>

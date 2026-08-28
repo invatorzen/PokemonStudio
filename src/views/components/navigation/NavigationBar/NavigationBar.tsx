@@ -44,12 +44,18 @@ export const NavigationBarComponent = () => {
           <NavigationBarItem path="/texts" onMouseLeave={onMouseLeave} onMouseEnter={buildOnMouseEnter(t('text_management'), 'right-center', true)}>
             <BaseIcon color={theme.colors.navigationIconColor} size="m" icon="texts" />
           </NavigationBarItem>
+          <NavigationBarItem path="/dialogues" onMouseLeave={onMouseLeave} onMouseEnter={buildOnMouseEnter(t('dialogues_section'), 'right-center', true)}>
+            <BaseIcon color={theme.colors.navigationIconColor} size="m" icon="messages" />
+          </NavigationBarItem>
           <WorldButton path="/world" onMouseLeave={onMouseLeave} onMouseEnter={buildOnMouseEnter(t('world_management'), 'right-center', true)} />
           <NavigationBarItem path="/online" onMouseLeave={onMouseLeave} onMouseEnter={buildOnMouseEnter(t('online_section'), 'right-center', true)}>
             <BaseIcon color={theme.colors.navigationIconColor} size="s" icon="online" />
           </NavigationBarItem>
           <NavigationBarItem path="/outfits" onMouseLeave={onMouseLeave} onMouseEnter={buildOnMouseEnter(t('outfits_section'), 'right-center', true)}>
             <BaseIcon color={theme.colors.navigationIconColor} size="s" icon="outfit" />
+          </NavigationBarItem>
+          <NavigationBarItem path="/crafting" onMouseLeave={onMouseLeave} onMouseEnter={buildOnMouseEnter(t('crafting_section'), 'right-center', true)}>
+            <BaseIcon color={theme.colors.navigationIconColor} size="s" icon="tune" />
           </NavigationBarItem>
           {window.api.isDev && (
             <NavigationBarItem path="/poc" onMouseLeave={onMouseLeave} onMouseEnter={buildOnMouseEnter('Proof of concept', 'right-center', true)}>

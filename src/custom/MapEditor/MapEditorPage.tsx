@@ -2527,7 +2527,7 @@ export const MapEditorPage = () => {
                   setSelectedEventId(null);
                 }}
                 onClose={() => setOpenEventId(null)}
-                getMapSnapshot={() => canvasRef.current?.snapshotDataURL?.() ?? null}
+                getMapSnapshot={(maxWidth) => canvasRef.current?.snapshotDataURL?.(maxWidth) ?? null}
                 currentMapId={map?.id}
                 mapWidthTiles={loaded?.json.width}
                 mapHeightTiles={loaded?.json.height}

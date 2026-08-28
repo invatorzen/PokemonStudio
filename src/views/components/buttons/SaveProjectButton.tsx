@@ -24,6 +24,11 @@ import { flushGrottoSave, getGrottoPending, subscribeGrottoPending } from '@src/
 import { flushSosSave, getSosPending, subscribeSosPending } from '@src/custom/SOS/sosPendingSave';
 import { flushSwitchesVariablesSave, getSwitchesVariablesPending, subscribeSwitchesVariablesPending } from '@src/custom/SwitchesVariables/switchesVariablesPendingSave';
 import { flushOutfitSave, getOutfitPending, subscribeOutfitPending } from '@src/custom/Outfits/outfitPendingSave';
+import { flushAmbientCriesSave, getAmbientCriesPending, subscribeAmbientCriesPending } from '@src/custom/AmbientCries/ambientCriesPendingSave';
+import { flushCraftingSave, getCraftingPending, subscribeCraftingPending } from '@src/custom/Crafting/craftingPendingSave';
+import { flushCriticalHealthAudioSave, getCriticalHealthAudioPending, subscribeCriticalHealthAudioPending } from '@src/custom/CriticalHealthAudio/criticalHealthAudioPendingSave';
+import { flushMapSettingsSave, getMapSettingsPending, subscribeMapSettingsPending } from '@src/custom/MapSettings/mapSettingsPendingSave';
+import { flushTypeChartsSave, getTypeChartsPending, subscribeTypeChartsPending } from '@src/custom/TypeCharts/typeChartsPendingSave';
 import { useProjectMaps } from '@hooks/useProjectData';
 import { useGlobalState } from '@src/GlobalStateProvider';
 import { playSound } from '@utils/sound';
@@ -190,6 +195,16 @@ export const SaveProjectButton = () => {
   const svPending = useSyncExternalStore(subscribeSwitchesVariablesPending, getSwitchesVariablesPending);
   // Unsaved Easy Outfits config, parked identically so it rides the same button.
   const outfitPending = useSyncExternalStore(subscribeOutfitPending, getOutfitPending);
+  // Unsaved Ambient Cries config, parked identically so it rides the same button.
+  const ambientCriesPending = useSyncExternalStore(subscribeAmbientCriesPending, getAmbientCriesPending);
+  // Unsaved Crafting config, parked identically so it rides the same button.
+  const craftingPending = useSyncExternalStore(subscribeCraftingPending, getCraftingPending);
+  // Unsaved Critical Health Audio config, parked identically so it rides the same button.
+  const criticalHealthAudioPending = useSyncExternalStore(subscribeCriticalHealthAudioPending, getCriticalHealthAudioPending);
+  // Unsaved per-map Settings (fog/panorama/battleback), parked identically.
+  const mapSettingsPending = useSyncExternalStore(subscribeMapSettingsPending, getMapSettingsPending);
+  // Unsaved alternative type charts, parked identically.
+  const typeChartsPending = useSyncExternalStore(subscribeTypeChartsPending, getTypeChartsPending);
   const [closeGuard, setCloseGuard] = useState(false);
 
   // Let the map editor's save dialog reach the project pipeline: writing map
@@ -221,6 +236,11 @@ export const SaveProjectButton = () => {
       await flushSosSave();
       await flushSwitchesVariablesSave();
       await flushOutfitSave();
+      await flushAmbientCriesSave();
+      await flushCraftingSave();
+      await flushCriticalHealthAudioSave();
+      await flushMapSettingsSave();
+      await flushTypeChartsSave();
     } catch (error) {
       loaderRef.current.setError('saving_project_error', error instanceof Error ? error.message : String(error));
       return;
@@ -288,7 +308,8 @@ export const SaveProjectButton = () => {
   };
 
   // Grotto and SOS configs count as project data — they save via "Save data", never maps/events.
-  const dataToSave = isDataToSave || !!grottoPending || !!sosPending || !!svPending || !!outfitPending;
+  const dataToSave =
+    isDataToSave || !!grottoPending || !!sosPending || !!svPending || !!outfitPending || !!ambientCriesPending || !!craftingPending || !!criticalHealthAudioPending || !!mapSettingsPending || !!typeChartsPending;
   // `mapTargets` only exists while the map editor is mounted, so relying on it
   // alone made the unsaved dot vanish the moment you left for another section.
   // The parked edits (tiles serialized on teardown, events parked on edit) live
@@ -298,7 +319,7 @@ export const SaveProjectButton = () => {
 
   const shortcutMap = useMemo<StudioShortcutActions>(() => {
     // No shortcut if an editor is opened and no data to save (grotto counts).
-    const isShortcutEnabled = () => !document.querySelector('#dialogs')?.textContent && (isDataToSave || !!getGrottoPending() || !!getSosPending() || !!getSwitchesVariablesPending() || !!getOutfitPending());
+    const isShortcutEnabled = () => !document.querySelector('#dialogs')?.textContent && (isDataToSave || !!getGrottoPending() || !!getSosPending() || !!getSwitchesVariablesPending() || !!getOutfitPending() || !!getAmbientCriesPending() || !!getCraftingPending() || !!getCriticalHealthAudioPending());
     return {
       save: () => {
         // Fork-specific: the map editor route claims Ctrl+S while mounted so

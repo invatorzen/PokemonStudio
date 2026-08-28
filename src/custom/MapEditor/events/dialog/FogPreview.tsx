@@ -2,6 +2,7 @@ import React from 'react';
 import styled from 'styled-components';
 import { ZoomPan } from '../../ZoomPan';
 import { useResourceImageSrc } from '@components/ResourceImage';
+import { TMX_TILE_PX } from './inGameFrame';
 
 /**
  * Fork-owned. Previews a Change Fog (204) command over a snapshot of the ACTUAL
@@ -17,8 +18,19 @@ import { useResourceImageSrc } from '@components/ResourceImage';
  *                 multiply-fog patch; canvas has no true subtract, so 2 is
  *                 approximated with color-burn (a distinct darkening).
  *   - hue      -> ctx.filter hue-rotate
- *   - zoom     -> tile scaled by zoom/100, repeated to cover
+ *   - zoom     -> 1 fog pixel = 1 map pixel at 100%, then scaled by zoom/100.
+ *                 Fog art is authored at 32 px/tile (TMX_TILE_PX). The map
+ *                 SNAPSHOT is capped for large maps, so it can be FEWER px/tile —
+ *                 drawing the fog 1:1 against the snapshot would then blow it up
+ *                 (a 2080px full-map fog over a ~half-res snapshot spills off the
+ *                 map and looks like it needs an offset). We rescale by
+ *                 (snapshot px/tile ÷ 32) so a full-map fog lands exactly on the
+ *                 map at offset 0, and a tiling fog tiles at its true map size.
  *   - sx / sy  -> the tiling origin drifts each frame (a motion hint)
+ *
+ * The fog is pinned 1:1 to the map at runtime (`$game_map.display_x / 4`), so
+ * tiling it over the whole-map snapshot from the origin (offset 0 = top-left)
+ * matches how it sits in game.
  *
  * We only ever drawImage (never getImageData), so the project:// fog texture
  * tainting the canvas is harmless — the composite is display-only.
@@ -47,6 +59,13 @@ type Props = {
   /** Viewport height for the ZoomPan. */
   height?: number;
   /**
+   * Map size in tiles — used to recover the snapshot's px-per-tile
+   * (`snapshotWidth / mapWidthTiles`) so the fog can be scaled to 1 fog-px = 1
+   * map-px regardless of how the snapshot was capped. Absent → assume 32px/tile.
+   */
+  mapWidthTiles?: number;
+  mapHeightTiles?: number;
+  /**
    * When set, left-dragging the preview reports an incremental offset change
    * (in fog-texture px) so the caller can update ox/oy live. Enables the
    * "grab the fog and slide it" gesture.
@@ -61,7 +80,7 @@ const BLEND_OP: Record<number, GlobalCompositeOperation> = {
   3: 'multiply',
 };
 
-export const FogPreview: React.FC<Props> = ({ snapshotUrl, fogName, hue, opacity, blend, zoom, sx, sy, ox, oy, height = 320, onOffsetChange }) => {
+export const FogPreview: React.FC<Props> = ({ snapshotUrl, fogName, hue, opacity, blend, zoom, sx, sy, ox, oy, height = 320, mapWidthTiles, mapHeightTiles, onOffsetChange }) => {
   const hasFog = !!fogName && fogName !== '__undef__';
   // Hooks must run unconditionally; feed a stable dummy path when there's no fog.
   const fogUrl = useResourceImageSrc(`graphics/fogs/${hasFog ? fogName : '__none__'}`);
@@ -80,11 +99,12 @@ export const FogPreview: React.FC<Props> = ({ snapshotUrl, fogName, hue, opacity
   const handleDrag = React.useCallback((dxCss: number, dyCss: number) => {
     const c = canvasRef.current;
     if (!c || !c.clientWidth || !c.clientHeight) return;
-    const scale = Math.max(0.05, paramsRef.current.zoom / 100);
+    const tpx = mapWidthTiles ? c.width / mapWidthTiles : TMX_TILE_PX;
+    const scale = Math.max(0.02, (tpx / TMX_TILE_PX) * (paramsRef.current.zoom / 100));
     const dxCanvas = dxCss * (c.width / c.clientWidth);
     const dyCanvas = dyCss * (c.height / c.clientHeight);
     onOffsetChange?.(-dxCanvas / scale, -dyCanvas / scale);
-  }, [onOffsetChange]);
+  }, [onOffsetChange, mapWidthTiles]);
 
   // Load the map snapshot.
   React.useEffect(() => {
@@ -139,7 +159,10 @@ export const FogPreview: React.FC<Props> = ({ snapshotUrl, fogName, hue, opacity
       else { ctx.fillStyle = '#20242c'; ctx.fillRect(0, 0, w, h); }
 
       if (fog) {
-        const scale = Math.max(0.05, zm / 100);
+        // 1 fog px = 1 map px; the snapshot may be < 32 px/tile, so bring the
+        // fog into the snapshot's px-per-tile before applying the user's zoom.
+        const tpx = mapWidthTiles ? w / mapWidthTiles : TMX_TILE_PX;
+        const scale = Math.max(0.02, (tpx / TMX_TILE_PX) * (zm / 100));
         const tw = Math.max(1, fog.naturalWidth * scale);
         const th = Math.max(1, fog.naturalHeight * scale);
         // Tiling origin in canvas px: the static offset (texture px → canvas px)
@@ -167,7 +190,7 @@ export const FogPreview: React.FC<Props> = ({ snapshotUrl, fogName, hue, opacity
     return () => cancelAnimationFrame(raf);
     // Re-run when the loaded images change; live param edits flow via paramsRef.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [snapshotUrl, fogUrl, hasFog, snapRef.current, fogRef.current]);
+  }, [snapshotUrl, fogUrl, hasFog, snapRef.current, fogRef.current, mapWidthTiles, mapHeightTiles]);
 
   if (!hasFog && !snapshotUrl) return null;
   // Taller than the tone preview: fog is a subtle full-screen effect, so a

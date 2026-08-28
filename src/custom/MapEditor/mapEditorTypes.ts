@@ -297,12 +297,13 @@ export type MapCanvasHandle = {
   /** Serialize current edits back to .tmx bytes; returns null if not loaded. */
   saveBytes: () => Uint8Array | null;
   /**
-   * A PNG data URL of the current rendered map (whole stage, metadata layers
-   * hidden as on screen), downscaled for cheap reuse. Returns null if the
-   * renderer can't produce one. Used by the event editor's tone-command
-   * preview to show a tint over the real map.
+   * A PNG data URL of the current rendered map, cropped to the map's exact
+   * logical bounds (metadata layers hidden as on screen). `maxWidth` caps the
+   * output width (default 640 — cheap for the per-pixel tone/weather previews);
+   * pass a larger value (e.g. the fog preview) for a crisp, near-native capture.
+   * Returns null if the renderer can't produce one.
    */
-  snapshotDataURL?: () => string | null;
+  snapshotDataURL?: (maxWidth?: number) => string | null;
   /** Force a full repaint (used after layer visibility toggles). */
   redraw: () => void;
   /** Revert the most recent paint. Returns true if anything was undone. */

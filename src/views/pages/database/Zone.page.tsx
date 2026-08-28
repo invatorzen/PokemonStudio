@@ -11,6 +11,7 @@ import { ZoneEditorOverlay, ZoneEditorAndDeletionKeys } from '@components/databa
 
 import { useDialogsRef } from '@src/hooks/useDialogsRef';
 import { useZonePage } from '@src/hooks/usePage';
+import { ZoneAmbientCries } from '@src/custom/AmbientCries/ZoneAmbientCries';
 
 export const ZonePage = () => {
   const dialogsRef = useDialogsRef<ZoneEditorAndDeletionKeys>();
@@ -33,6 +34,9 @@ export const ZonePage = () => {
           </DataBlockWrapper>
           <DataBlockWrapper>
             <ZonePokemon zone={zone} groups={groups} />
+          </DataBlockWrapper>
+          <DataBlockWrapper>
+            <ZoneAmbientCries zone={zone} groups={groups} />
           </DataBlockWrapper>
           <DataBlockWrapper>
             <DataBlockWithAction size="full" title={t('deletion')}>

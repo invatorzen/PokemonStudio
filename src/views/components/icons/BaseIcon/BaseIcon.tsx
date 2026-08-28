@@ -4,6 +4,7 @@ import EditIcon from '@assets/icons/global/edit-icon.svg';
 import FolderIcon from '@assets/icons/global/folder.svg';
 import MapLinkIcon from '@assets/icons/global/map-link.svg';
 import MapPaddedIcon from '@assets/icons/global/map-padded.svg';
+import MessagesIcon from '@assets/icons/global/messages-icon.svg';
 import NewFolderIcon from '@assets/icons/global/new-folder.svg';
 import PlusIcon from '@assets/icons/global/plus-icon.svg';
 import TextsIcon from '@assets/icons/global/texts-icon.svg';
@@ -34,6 +35,7 @@ export type IconName =
   | 'database'
   | 'map'
   | 'mapPadded'
+  | 'messages'
   | 'texts'
   | 'code'
   | 'help'
@@ -60,6 +62,7 @@ const iconNameToIcon: Record<IconName, typeof TopIcon> = {
   database: Database,
   map: MapIcon,
   mapPadded: MapPaddedIcon,
+  messages: MessagesIcon,
   texts: TextsIcon,
   code: CodeIcon,
   help: HelpIcon,

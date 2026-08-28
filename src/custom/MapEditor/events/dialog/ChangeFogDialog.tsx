@@ -84,16 +84,26 @@ type Props = {
   // accumulate offset deltas functionally without losing intermediate moves.
   setForm: React.Dispatch<React.SetStateAction<CmdForm | null>>;
   fogFiles: string[];
-  getMapSnapshot?: () => string | null;
+  getMapSnapshot?: (maxWidth?: number) => string | null;
+  mapWidthTiles?: number;
+  mapHeightTiles?: number;
   onSubmit: () => void;
   onCancel: () => void;
 };
 
-export const ChangeFogDialog = ({ form, setForm, fogFiles, getMapSnapshot, onSubmit, onCancel }: Props) => {
+/**
+ * Fog needs a crisp, near-native map capture (the inline tone/weather previews
+ * cap at 640px for their per-pixel work, which looks blocky here). 4096 gives a
+ * pixel-perfect grab for any normal map and only lightly downscales huge ones.
+ */
+const FOG_SNAPSHOT_MAX_WIDTH = 4096;
+
+export const ChangeFogDialog = ({ form, setForm, fogFiles, getMapSnapshot, mapWidthTiles, mapHeightTiles, onSubmit, onCancel }: Props) => {
   const { t } = useTranslation();
-  // Capture the map snapshot once when the dialog opens (same as the inline
-  // tone/fog previews) — the underlying canvas doesn't change while it's up.
-  const [mapSnapshot] = useState<string | null>(() => getMapSnapshot?.() ?? null);
+  // Capture the map snapshot once when the dialog opens — the underlying canvas
+  // doesn't change while it's up. Ask for a high-res crop so the fog preview is
+  // sharp and lands 1:1 on the map.
+  const [mapSnapshot] = useState<string | null>(() => getMapSnapshot?.(FOG_SNAPSHOT_MAX_WIDTH) ?? null);
 
   return (
     <Scrim onMouseDown={(e) => { if (e.target === e.currentTarget) onCancel(); }}>
@@ -161,6 +171,8 @@ export const ChangeFogDialog = ({ form, setForm, fogFiles, getMapSnapshot, onSub
               ox={form.fogOx}
               oy={form.fogOy}
               height={520}
+              mapWidthTiles={mapWidthTiles}
+              mapHeightTiles={mapHeightTiles}
               onOffsetChange={(dOx, dOy) =>
                 setForm((prev) => (prev ? { ...prev, fogOx: Math.round(prev.fogOx + dOx), fogOy: Math.round(prev.fogOy + dOy) } : prev))
               }

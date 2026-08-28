@@ -8,6 +8,9 @@ import { TypeList } from './TypeList';
 import { useGetEntityNameTextUsingTextId } from '@utils/ReadingProjectText';
 import { StudioType } from '@modelEntities/type';
 import { useTypePage } from '@hooks/usePage';
+import { useTypeChartsConfig } from '@src/custom/TypeCharts/typeChartsConfigStore';
+import { useSelectedChartId } from '@src/custom/TypeCharts/typeChartsSelection';
+import { projectTypeOntoChart, projectTypesOntoChart } from '@src/custom/TypeCharts/typeChartsProjection';
 
 type RenderResistanceProps = {
   t: TFunction;
@@ -47,9 +50,13 @@ const getResistances = (allTypes: StudioType[], type: StudioType) => {
 
 export const TypeResistanceData = () => {
   const { types: allTypes, currentType: type } = useTypePage();
-  const types: StudioType[] = Object.values(allTypes);
+  const { charts } = useTypeChartsConfig();
+  const selectedChartId = useSelectedChartId();
+  const selectedChart = charts.find((chart) => chart.id === selectedChartId);
+  // Show the SELECTED chart's resistances (Default = the base type data unchanged).
+  const types: StudioType[] = Object.values(projectTypesOntoChart(allTypes, selectedChart));
   const { t } = useTranslation();
-  const efficiencyData = getResistances(types, type);
+  const efficiencyData = getResistances(types, projectTypeOntoChart(type, selectedChart));
 
   return (
     <DataBlockWithTitleNoActive size="half" title={t('resistances')}>

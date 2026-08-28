@@ -1,0 +1,38 @@
+{
+  "en": {
+    "type_charts_section": "Type charts",
+    "type_charts_chart": "Chart",
+    "type_charts_default": "Default",
+    "type_charts_unnamed": "Unnamed chart",
+    "type_charts_add": "New chart",
+    "type_charts_name": "Chart name",
+    "type_charts_delete": "Delete this chart",
+    "type_charts_create": "Create chart",
+    "type_charts_deletion_title": "Delete type chart",
+    "type_charts_deletion_message": "Are you sure you want to delete the type chart \"{{name}}\"?",
+    "type_charts_name_placeholder": "e.g. Inverse Battle",
+    "type_charts_new_name": "Chart {{id}}",
+    "type_charts_hint": "Alternative full type charts. In-game, set variable 501 to a chart's id to activate it (0 = Default). A new chart starts as a copy of the default so you can tweak from a known baseline.",
+    "type_charts_matrix_edition": "Edition",
+    "type_charts_matrix_hint": "Effectiveness table",
+    "type_charts_cell_tooltip": "Click to cycle up, right-click to cycle down"
+  },
+  "fr": {
+    "type_charts_section": "Tables des types",
+    "type_charts_chart": "Table",
+    "type_charts_default": "Par défaut",
+    "type_charts_unnamed": "Table sans nom",
+    "type_charts_add": "Nouvelle table",
+    "type_charts_name": "Nom de la table",
+    "type_charts_delete": "Supprimer cette table",
+    "type_charts_create": "Créer la table",
+    "type_charts_deletion_title": "Supprimer la table des types",
+    "type_charts_deletion_message": "Voulez-vous vraiment supprimer la table des types « {{name}} » ?",
+    "type_charts_name_placeholder": "ex. Combat inversé",
+    "type_charts_new_name": "Table {{id}}",
+    "type_charts_hint": "Tables de types alternatives et complètes. En jeu, réglez la variable 501 sur l'id d'une table pour l'activer (0 = Par défaut). Une nouvelle table démarre comme une copie de la table par défaut.",
+    "type_charts_matrix_edition": "Édition",
+    "type_charts_matrix_hint": "Table d'efficacité",
+    "type_charts_cell_tooltip": "Clic pour augmenter, clic droit pour diminuer"
+  }
+}

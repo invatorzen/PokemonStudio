@@ -8,6 +8,7 @@ import { TextInputError } from '@components/inputs/Input';
 import { checkDbSymbolExist, generateDefaultDbSymbol, wrongDbSymbol } from '@utils/dbSymbolUtils';
 import { useProjectPokemon, useProjectDex } from '@hooks/useProjectData';
 import { createCreature } from '@utils/entityCreation';
+import { findFirstAvailableId } from '@utils/ModelUtils';
 import { useSetProjectText, useGetProjectText } from '@utils/ReadingProjectText';
 import {
   CREATURE_DESCRIPTION_TEXT_ID,
@@ -49,6 +50,16 @@ const ImportInfoContainer = styled.div`
   gap: 4px;
 `;
 
+const ConflictText = styled.p`
+  ${({ theme }) => theme.fonts.normalRegular};
+  color: ${({ theme }) => theme.colors.text100};
+  margin: 0;
+
+  & b {
+    color: ${({ theme }) => theme.colors.text100};
+  }
+`;
+
 type Props = {
   closeDialog: () => void;
   setEvolutionIndex: (index: number) => void;
@@ -73,14 +84,36 @@ export const PokemonNewEditor = forwardRef<EditorHandlingClose, Props>(({ closeD
   const getText = useGetProjectText();
   const [selectedCreature, setSelectedCreature] = useState('__undef__');
   const [importing, setImporting] = useState(false);
+  // When the id the new creature would take already has a leftover name (e.g. a
+  // recycled national-dex row like "Ponyta" at id 77), we pause and ask the user.
+  const [collision, setCollision] = useState<{ id: number; name: string } | undefined>(undefined);
 
-  const onClickNew = () => {
+  // The existing display name sitting at a given creature id, or '' when the row
+  // is empty/absent. Used to detect that a new creature would inherit a stale name.
+  const nameAtId = (id: number): string => {
+    const text = getText(CREATURE_NAME_TEXT_ID, id);
+    if (!text || text.startsWith('Unable to find')) return '';
+    const trimmed = text.trim();
+    return trimmed === '-' ? '' : trimmed;
+  };
+
+  // The first id that is both unused by a creature AND has no leftover name, so a
+  // reassigned creature can never adopt someone else's name.
+  const firstCleanId = (): number => {
+    const used = new Set(Object.values(creatures).map((c) => c.id));
+    let id = findFirstAvailableId(creatures, 1);
+    while (used.has(id) || nameAtId(id) !== '') id += 1;
+    return id;
+  };
+
+  const buildAndCommit = (idToUse: number) => {
     const result = getFormData();
     if (!dbSymbolRef.current || !name || !descriptionRef.current || !formNameRef.current || !result.success) return;
 
     const dbSymbol = dbSymbolRef.current.value as DbSymbol;
     const { type1, type2 } = result.data;
     let newCreature = createCreature(creatures, dbSymbol, type1, type2);
+    if (newCreature.id !== idToUse) newCreature = cloneEntity({ ...newCreature, id: idToUse });
 
     if (importing && selectedCreature !== '__undef__') {
       newCreature = importCreatureData(newCreature, creatures[selectedCreature], creatures);
@@ -120,6 +153,22 @@ export const PokemonNewEditor = forwardRef<EditorHandlingClose, Props>(({ closeD
     closeDialog();
   };
 
+  const onClickNew = () => {
+    const result = getFormData();
+    if (!dbSymbolRef.current || !name || !descriptionRef.current || !formNameRef.current || !result.success) return;
+
+    // The id the new creature would take. If a name already sits there, pause and
+    // ask the user (overwrite it, or reassign to a fresh id) instead of silently
+    // creating a creature that displays under someone else's name.
+    const proposedId = findFirstAvailableId(creatures, 1);
+    const existingName = nameAtId(proposedId);
+    if (existingName) {
+      setCollision({ id: proposedId, name: existingName });
+      return;
+    }
+    buildAndCommit(proposedId);
+  };
+
   /**
    * Handle the error validation of the dbSymbol when the dbSymbol is changed
    */
@@ -151,6 +200,21 @@ export const PokemonNewEditor = forwardRef<EditorHandlingClose, Props>(({ closeD
    * Check if the entity cannot be created because of any validation error
    */
   const isDisabled = !name || !!dbSymbolErrorType;
+
+  if (collision) {
+    return (
+      <Editor type="edit" title={t('creature_id_conflict')}>
+        <InputFormContainer>
+          <ConflictText>{t('creature_id_conflict_message', { id: collision.id, name: collision.name })}</ConflictText>
+          <ButtonContainer>
+            <PrimaryButton onClick={() => buildAndCommit(firstCleanId())}>{t('creature_reassign_id')}</PrimaryButton>
+            <DarkButton onClick={() => buildAndCommit(collision.id)}>{t('creature_overwrite_id', { name: collision.name })}</DarkButton>
+            <DarkButton onClick={() => setCollision(undefined)}>{t('creature_conflict_back')}</DarkButton>
+          </ButtonContainer>
+        </InputFormContainer>
+      </Editor>
+    );
+  }
 
   return (
     <Editor type="creation" title={t('new_creature')}>

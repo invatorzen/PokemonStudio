@@ -10,6 +10,9 @@ import { DataBlockWrapperWithNoBreakpoint } from '@components/database/dataBlock
 import { TypeEditorAndDeletionKeys, TypeEditorOverlay } from '@components/database/type/editors/TypeEditorOverlay';
 import { useDialogsRef } from '@hooks/useDialogsRef';
 import { useTypePage } from '@hooks/usePage';
+import { TypeChartEditor } from '@src/custom/TypeCharts/TypeChartEditor';
+import { useTypeChartsConfig } from '@src/custom/TypeCharts/typeChartsConfigStore';
+import { useSelectedChartId } from '@src/custom/TypeCharts/typeChartsSelection';
 
 export const TypeTablePage = () => {
   const { types, typeDbSymbol } = useTypePage();
@@ -17,6 +20,9 @@ export const TypeTablePage = () => {
   const navigate = useNavigate();
   const { t } = useTranslation();
   const currentType = types[typeDbSymbol] || types[typeDbSymbol];
+  const { charts } = useTypeChartsConfig();
+  const selectedChartId = useSelectedChartId();
+  const selectedChart = charts.find((chart) => chart.id === selectedChartId);
 
   const onClickedBack = () => navigate(`/database/types/${currentType.dbSymbol}`);
 
@@ -27,6 +33,7 @@ export const TypeTablePage = () => {
         <PageDataConstrainerStyle>
           <DataBlockWrapperWithNoBreakpoint>
             <SubPageTitle title={t('table')} onClickedBack={onClickedBack} />
+            {selectedChart && <TypeChartEditor chart={selectedChart} />}
             <TypeTable />
           </DataBlockWrapperWithNoBreakpoint>
           <TypeEditorOverlay ref={dialogsRef} />

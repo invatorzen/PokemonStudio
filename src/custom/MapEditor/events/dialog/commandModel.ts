@@ -149,6 +149,8 @@ export type CmdForm = {
   shakePower: number;
   shakeSpeed: number;
   shakeDuration: number;
+  /** Axis, written as extra param [3] on the 225 command: 0 horizontal, 1 vertical, 2 both. */
+  shakeAxis: number;
   /**
    * Screen/Fog/Picture Color Tone (223 / 205 / 234) and Screen Flash (224).
    * All four store four channels as doubles; for a Tone the 4th is "gray"
@@ -413,7 +415,7 @@ export const emptyForm = (kind: CmdFormKind, mode: 'insert' | 'edit'): CmdForm =
   picZoomX: 100, picZoomY: 100, picOpacity: 255, picBlend: 0, picDuration: 20,
   goldOp: 0, goldByVariable: false, goldValue: 0,
   scrollDir: 2, scrollDistance: 1, scrollSpeed: 4,
-  shakePower: 5, shakeSpeed: 5, shakeDuration: 20,
+  shakePower: 5, shakeSpeed: 5, shakeDuration: 20, shakeAxis: 0,
   // A neutral (all-zero) tone over 20 frames — RMXP's "clear tint" default.
   toneRed: 0, toneGreen: 0, toneBlue: 0, toneGray: 0, toneDuration: 20,
   // RMXP's Change Fog defaults: opacity 64, normal blend, 200% zoom, no scroll.
@@ -546,7 +548,9 @@ export const buildCommandsFromForm = (form: CmdForm, indent: number): WorkingCom
       return [{ code: 203, indent, parameters: [form.scrollDir, Math.max(0, form.scrollDistance), clamp(form.scrollSpeed, 1, 6)] }];
     case 'screenShake':
       // Duration stored raw (PSDK doubles it at runtime), like the pictures.
-      return [{ code: 225, indent, parameters: [form.shakePower, form.shakeSpeed, Math.max(0, form.shakeDuration)] }];
+      // Param [3] = axis (fork extra: 0 horizontal, 1 vertical, 2 both). Vanilla
+      // command_225 only reads [0..2], so this is inert without our patch.
+      return [{ code: 225, indent, parameters: [form.shakePower, form.shakeSpeed, Math.max(0, form.shakeDuration), form.shakeAxis] }];
     case 'prepareTransition':
       return [{ code: 221, indent, parameters: [] }];
     case 'executeTransition':
@@ -1902,6 +1906,7 @@ export const formFromChain = (chain: { entries: WorkingCommand[] }, isCsvFile?: 
     form.shakePower = Number(p[0]) || 0;
     form.shakeSpeed = Number(p[1]) || 0;
     form.shakeDuration = Number(p[2]) || 0;
+    form.shakeAxis = Number(p[3]) || 0;
   } else if (kind === 'changeFog') {
     const num = (v: unknown, d: number): number => {
       const n = Number(v);

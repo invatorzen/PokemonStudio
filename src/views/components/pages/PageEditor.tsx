@@ -20,6 +20,8 @@ export type PageEditorProps = Omit<DataBlockWithTitleProps, 'size'> & {
   disabledDeletion?: boolean;
   disabledImport?: boolean;
   canCollapse?: true;
+  /** Container width. Defaults to 'default'; pass 'full' to span the page like a DataBlock. */
+  size?: DataBlockWithTitleProps['size'];
 };
 
 const PageEditorContainer = styled(DataBlockEditorContainer)`
@@ -69,6 +71,7 @@ export const PageEditor = ({
   disabledDeletion,
   disabledImport,
   canCollapse,
+  size = 'default',
 }: PageEditorProps) => {
   const { t } = useTranslation();
   const [collapse, setCollapse] = useState(false);
@@ -77,7 +80,7 @@ export const PageEditor = ({
   };
 
   return (
-    <PageEditorContainer size="default" data-disabled={disabled && 'true'} data-noactive>
+    <PageEditorContainer size={size} data-disabled={disabled && 'true'} data-noactive>
       <PageHeaderContainer isCollapse={collapse} onClick={canCollapse && onClickedCollapse} canCollapse={!!canCollapse}>
         <TitleContainer>
           <p>{editorTitle}</p>

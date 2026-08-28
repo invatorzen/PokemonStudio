@@ -221,7 +221,7 @@ type Props = {
   resolveCsv: (fileId: number, line: number) => string | undefined;
   pageLabels: string[];
   /** Capture a PNG data URL of the current map — used for the tone command's on-map preview. */
-  getMapSnapshot?: () => string | null;
+  getMapSnapshot?: (maxWidth?: number) => string | null;
   /** Map size in tiles — frames the shake command's in-game preview. */
   mapWidthTiles?: number;
   mapHeightTiles?: number;
@@ -230,6 +230,15 @@ type Props = {
   /** When set, the Call Common Event form shows an "Edit common events" button. */
   onEditCommonEvents?: () => void;
 };
+
+/**
+ * Width cap for the framed on-map previews (Screen Shake / Weather / Map
+ * Overlay). They frame the game screen — a zoomed-in slice of the map — so they
+ * need a near-native capture to stay sharp; 4096 is pixel-perfect for any normal
+ * map and only lightly downscales huge ones. (The tone preview keeps the small
+ * default so its per-pixel re-tint stays cheap.)
+ */
+const PREVIEW_SNAPSHOT_MAX_WIDTH = 4096;
 
 /**
  * The command editor form (the panel that opens when inserting or editing a
@@ -245,8 +254,12 @@ export const CommandForm = ({ form, setForm, onSubmit, onCancel, systemNames, au
   const [locPickerOpen, setLocPickerOpen] = useState(false);
   const currentMap = projectMaps.find((m) => m.id === currentMapId);
   // Capture the map once when the form opens — it doesn't change while the
-  // dialog is up, and the tone preview re-tints this same snapshot live.
+  // dialog is up. TWO grabs: a small one the tone preview re-tints per-pixel live
+  // (kept cheap on purpose), and a crisp, near-native one for the framed previews
+  // (Screen Shake, Weather, Map Overlay) that zoom into the map and would look
+  // blocky at the small size. See PREVIEW_SNAPSHOT_MAX_WIDTH.
   const [mapSnapshot] = useState<string | null>(() => getMapSnapshot?.() ?? null);
+  const [mapSnapshotHi] = useState<string | null>(() => getMapSnapshot?.(PREVIEW_SNAPSHOT_MAX_WIDTH) ?? null);
   // Preview-only reference preset for the Adjust command (it has no preset of
   // its own). Default to the first non-image preset so it renders without the
   // user having to pick a fog graphic first.
@@ -523,16 +536,23 @@ export const CommandForm = ({ form, setForm, onSubmit, onCancel, systemNames, au
           <Dim>{t('me_events_shake_duration')}</Dim>
           <SmallInput type="number" min={0} value={form.shakeDuration} onChange={(e) => setForm({ ...form, shakeDuration: Math.max(0, Number(e.target.value) || 0) })} />
           <Dim>{t('me_events_pic_frames')}</Dim>
+          <Dim>{t('me_events_shake_axis')}</Dim>
+          <SmallSelect value={form.shakeAxis} onChange={(e) => setForm({ ...form, shakeAxis: Number(e.target.value) })}>
+            <option value={0}>{t('me_events_shake_axis_horizontal')}</option>
+            <option value={1}>{t('me_events_shake_axis_vertical')}</option>
+            <option value={2}>{t('me_events_shake_axis_both')}</option>
+          </SmallSelect>
         </Row>
       )}
       {form.kind === 'screenShake' && (
         <Row style={{ alignItems: 'flex-start' }}>
           <Dim style={{ minWidth: 52, paddingTop: 4 }}>{t('me_events_shake_preview')}</Dim>
           <ShakePreview
-            snapshotUrl={mapSnapshot}
+            snapshotUrl={mapSnapshotHi}
             power={form.shakePower}
             speed={form.shakeSpeed}
             duration={form.shakeDuration}
+            axis={form.shakeAxis}
             projectPath={projectPath ?? undefined}
             mapWidthTiles={mapWidthTiles}
             mapHeightTiles={mapHeightTiles}
@@ -560,7 +580,7 @@ export const CommandForm = ({ form, setForm, onSubmit, onCancel, systemNames, au
           <Row style={{ alignItems: 'flex-start' }}>
             <Dim style={{ minWidth: 52, paddingTop: 4 }}>{t('me_events_weather_preview')}</Dim>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <WeatherPreview snapshotUrl={mapSnapshot} type={form.weatherType} power={form.weatherPower} />
+              <WeatherPreview snapshotUrl={mapSnapshotHi} type={form.weatherType} power={form.weatherPower} />
             </div>
           </Row>
         </>
@@ -1060,7 +1080,7 @@ export const CommandForm = ({ form, setForm, onSubmit, onCancel, systemNames, au
             <Row style={{ alignItems: 'flex-start' }}>
               <Dim style={{ minWidth: 52, paddingTop: 4 }}>{t('me_events_overlay_preview')}</Dim>
               <MapOverlayPreview
-                snapshotUrl={mapSnapshot}
+                snapshotUrl={mapSnapshotHi}
                 preset={form.overlayPreset}
                 params={overlayParamsFromForm(form)}
                 projectPath={projectPath ?? undefined}
@@ -1291,7 +1311,7 @@ export const CommandForm = ({ form, setForm, onSubmit, onCancel, systemNames, au
           <Row style={{ alignItems: 'flex-start' }}>
             <Dim style={{ minWidth: 52, paddingTop: 4 }}>{t('me_events_overlay_preview')}</Dim>
             <MapOverlayPreview
-              snapshotUrl={mapSnapshot}
+              snapshotUrl={mapSnapshotHi}
               preset={overlaySetPreviewPreset}
               params={overlaySetParamsForPreview(form, overlaySetPreviewPreset)}
               projectPath={projectPath ?? undefined}

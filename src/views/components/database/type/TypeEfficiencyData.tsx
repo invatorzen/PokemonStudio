@@ -8,6 +8,9 @@ import { TypeList } from './TypeList';
 import { getEfficiencies, StudioType } from '@modelEntities/type';
 import { useTypePage } from '@hooks/usePage';
 import { useGetEntityNameTextUsingTextId } from '@utils/ReadingProjectText';
+import { useTypeChartsConfig } from '@src/custom/TypeCharts/typeChartsConfigStore';
+import { useSelectedChartId } from '@src/custom/TypeCharts/typeChartsSelection';
+import { projectTypeOntoChart, projectTypesOntoChart } from '@src/custom/TypeCharts/typeChartsProjection';
 
 type RenderEfficienceProps = {
   t: TFunction;
@@ -36,9 +39,13 @@ const RenderEfficience = ({ t, efficience, types }: RenderEfficienceProps) => {
 
 export const TypeEfficiencyData = () => {
   const { types: allTypes, currentType: type } = useTypePage();
-  const types: StudioType[] = Object.values(allTypes);
+  const { charts } = useTypeChartsConfig();
+  const selectedChartId = useSelectedChartId();
+  const selectedChart = charts.find((chart) => chart.id === selectedChartId);
+  // Show the SELECTED chart's efficiencies (Default = the base type data unchanged).
+  const types: StudioType[] = Object.values(projectTypesOntoChart(allTypes, selectedChart));
   const { t } = useTranslation();
-  const efficiencyData = getEfficiencies(types, type);
+  const efficiencyData = getEfficiencies(types, projectTypeOntoChart(type, selectedChart));
 
   return (
     <DataBlockWithTitleNoActive size="half" title={t('efficiencies')}>

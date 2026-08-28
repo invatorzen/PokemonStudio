@@ -2081,7 +2081,7 @@ export const PixiMapCanvas = forwardRef<MapCanvasHandle, PixiMapCanvasProps>(
       // extract (the drawing buffer isn't preserved, so reading app.canvas
       // directly would come back blank). Best-effort: any failure → null, and
       // the tone form falls back to its abstract swatches.
-      snapshotDataURL: () => {
+      snapshotDataURL: (maxWidth = 640) => {
         const app = appRef.current;
         const root = rootRef.current;
         if (!app || !root) return null;
@@ -2105,10 +2105,17 @@ export const PixiMapCanvas = forwardRef<MapCanvasHandle, PixiMapCanvasProps>(
           });
         }
         try {
-          // extract renders on demand, so it reflects the visibility we just set.
-          const src = app.renderer.extract.canvas(root) as HTMLCanvasElement;
+          // Crop to the map's EXACT logical bounds. Extracting the whole `root`
+          // lets overlays/markers that spill past the map edges enlarge or shift
+          // the capture, which desyncs every preview that assumes snapshot px map
+          // 1:1 to map px (the fog offset drift). A fixed (0,0,w,h) frame anchors
+          // it. extract renders on demand, so it reflects the visibility set above.
+          const frame = state
+            ? new PIXI.Rectangle(0, 0, state.json.width * state.json.tilewidth, state.json.height * state.json.tileheight)
+            : undefined;
+          const src = app.renderer.extract.canvas(frame ? { target: root, frame } : root) as HTMLCanvasElement;
           if (!src || !src.width || !src.height) return null;
-          const maxW = 640;
+          const maxW = Math.max(1, maxWidth);
           const scale = Math.min(1, maxW / src.width);
           if (scale === 1) return typeof src.toDataURL === 'function' ? src.toDataURL('image/png') : null;
           const off = document.createElement('canvas');
@@ -2145,17 +2152,49 @@ export const PixiMapCanvas = forwardRef<MapCanvasHandle, PixiMapCanvasProps>(
         try {
           let text = new TextDecoder('utf-8').decode(bytes);
 
-          // ---- 1. Rewrite <tileset firstgid="…"/> declarations -----------
-          let tsIdx = 0;
-          text = text.replace(/<tileset\b([^>]*?)firstgid="(\d+)"([^>]*?)\/?>/g, (m, pre, _fg, post) => {
-            const correct = ts[tsIdx]?.firstgid;
-            tsIdx++;
-            if (correct == null) return m;
-            return `<tileset${pre}firstgid="${correct}"${post}/>`;
+          // ---- 1. Rewrite <tileset firstgid="…"/> BY IDENTITY (source/name) ----
+          // Positional zipping corrupts maps where the bridge emits tilesets (or
+          // layers, below) in a different document order than our JS state — some
+          // grouped maps do — because the firstgids then get pinned to the wrong
+          // tileset and every cell resolves to the wrong tiles. Match each emitted
+          // <tileset> to our state by its `source` (external) or `name` (embedded).
+          // If anything can't be reconciled, ABORT the save (return null → the
+          // caller writes nothing) rather than persist a positional guess that
+          // would scramble the map. Order-preserving maps match identically, so
+          // this never changes a currently-correct save.
+          const tsBasename = (p: string) => p.replace(/\\/g, '/').split('/').pop() ?? p;
+          const fgBySource = new Map<string, number>();
+          const fgByName = new Map<string, number>();
+          ts.forEach((t) => {
+            if (t.firstgid == null) return;
+            if (t.source) fgBySource.set(tsBasename(t.source), t.firstgid);
+            const n = (t as { name?: string }).name;
+            if (n) fgByName.set(n, t.firstgid);
           });
-          if (tsIdx !== ts.length) {
-            console.warn(`[map-editor] saveBytes firstgid rewrite: matched ${tsIdx} <tileset> tags, expected ${ts.length} — leaving original bytes`);
-            return bytes;
+          let tsMatched = 0;
+          let tsUnresolved = false;
+          const emittedTs: string[] = [];
+          text = text.replace(/<tileset\b[^>]*>/g, (tag) => {
+            if (!/firstgid="\d+"/.test(tag)) return tag; // not a firstgid-bearing <tileset> decl
+            tsMatched++;
+            const src = /source="([^"]*)"/.exec(tag)?.[1];
+            const nm = /\bname="([^"]*)"/.exec(tag)?.[1];
+            emittedTs.push(src != null ? `source:${tsBasename(src)}` : nm != null ? `name:${nm}` : '?');
+            const correct = (src != null ? fgBySource.get(tsBasename(src)) : undefined) ?? (nm != null ? fgByName.get(nm) : undefined);
+            if (correct == null) {
+              tsUnresolved = true;
+              return tag;
+            }
+            return tag.replace(/firstgid="\d+"/, `firstgid="${correct}"`);
+          });
+          if (tsUnresolved || tsMatched !== ts.length) {
+            console.error(
+              `[map-editor] saveBytes ABORT — tilesets did not reconcile by source/name (matched ${tsMatched}/${ts.length}${tsUnresolved ? ', unresolved present' : ''}).`,
+              '\n  emitted:', emittedTs,
+              '\n  state.source:', ts.map((t) => (t.source ? tsBasename(t.source) : null)),
+              '\n  state.name:', ts.map((t) => (t as { name?: string }).name ?? null)
+            );
+            return null;
           }
 
           // ---- 2. Replace every <data encoding="csv">…</data> block ------
@@ -2175,40 +2214,67 @@ export const PixiMapCanvas = forwardRef<MapCanvasHandle, PixiMapCanvasProps>(
           // load (.tmx-parsed) and every subsequent paint. The mirror lives
           // on prev.json.layers (flattened); we walk the .tmx's <layer> tags
           // in document order and zip them against the flattened JS list.
-          const jsLayers = prev.json.layers.filter((l) => l.type === 'tilelayer');
-          let layerOrdinal = 0;
-          let csvMismatch = false;
+          // Match each emitted <layer>'s CSV to our JS mirror BY NAME (not
+          // position). Duplicate layer names would be ambiguous, so treat that as
+          // un-reconcilable and abort too.
+          const jsLayerByName = new Map<string, { data: number[]; width?: number }>();
+          let dupLayerName = false;
+          prev.json.layers.forEach((l) => {
+            if (l.type !== 'tilelayer' || !Array.isArray(l.data)) return;
+            if (jsLayerByName.has(l.name)) dupLayerName = true;
+            jsLayerByName.set(l.name, { data: l.data as number[], width: l.width });
+          });
+          // The bridge's MapWriter can emit cell data as base64 (optionally
+          // zlib/gzip-compressed), NOT csv. Matching only encoding="csv" here
+          // skipped every layer, so the firstgid rewrite above landed but the
+          // cells stayed in the bridge's (collided) gid namespace → the scramble.
+          // Support ANY input encoding, but always re-emit our canonical csv:
+          // match the whole <data …> block regardless of encoding/compression and
+          // replace it with an encoding="csv" block built from the JS mirror, so
+          // the saved cells always match the corrected firstgids.
+          let layerMatched = 0;
+          let layerUnresolved = false;
+          const emittedLayers: string[] = [];
           text = text.replace(
-            /(<layer\b[^>]*>[\s\S]*?<data\b[^>]*encoding="csv"[^>]*>)([\s\S]*?)(<\/data>)/g,
-            (full, openTag, _oldCsv, closeTag) => {
-              const jsLayer = jsLayers[layerOrdinal];
-              layerOrdinal++;
-              if (!jsLayer || !Array.isArray(jsLayer.data)) {
-                csvMismatch = true;
+            /(<layer\b([^>]*)>[\s\S]*?)<data\b[^>]*>([\s\S]*?)<\/data>/g,
+            (full, openThroughLayer, layerAttrs, _oldData) => {
+              layerMatched++;
+              const nm = /\bname="([^"]*)"/.exec(layerAttrs)?.[1];
+              emittedLayers.push(nm ?? '?');
+              const jsLayer = nm != null ? jsLayerByName.get(nm) : undefined;
+              if (!jsLayer) {
+                layerUnresolved = true;
                 return full;
               }
               const w = jsLayer.width ?? prev.json.width;
-              const data = jsLayer.data as number[];
+              const data = jsLayer.data;
               const rows: string[] = [];
               for (let y = 0; y < Math.ceil(data.length / w); y++) {
                 const start = y * w;
                 const end = Math.min(start + w, data.length);
                 rows.push(data.slice(start, end).map((g) => (g >>> 0).toString()).join(','));
               }
-              // Match libtiled's formatting: leading newline, row-per-line,
-              // trailing comma+newline on all but last row, newline after last.
+              // libtiled-style csv: leading newline, row-per-line, trailing newline.
               const csv = '\n' + rows.join(',\n') + '\n';
-              return openTag + csv + closeTag;
+              return `${openThroughLayer}<data encoding="csv">${csv}</data>`;
             },
           );
-          if (csvMismatch || layerOrdinal !== jsLayers.length) {
-            console.warn(`[map-editor] saveBytes cell rewrite: matched ${layerOrdinal} <layer> blocks, expected ${jsLayers.length}${csvMismatch ? ' (also: missing JS mirror data)' : ''} — saved file may be inconsistent`);
+          if (dupLayerName || layerUnresolved || layerMatched !== jsLayerByName.size) {
+            console.error(
+              `[map-editor] saveBytes ABORT — layers did not reconcile by name (matched ${layerMatched}/${jsLayerByName.size}${layerUnresolved ? ', unresolved present' : ''}${dupLayerName ? ', duplicate names' : ''}).`,
+              '\n  emitted:', emittedLayers,
+              '\n  state:', Array.from(jsLayerByName.keys())
+            );
+            return null;
           }
 
           return new TextEncoder().encode(text);
         } catch (e) {
-          console.warn('[map-editor] saveBytes rewrite failed', e);
-          return bytes;
+          // On any unexpected failure, abort rather than write the bridge's raw
+          // (possibly firstgid-collided) bytes — a failed save is recoverable, a
+          // corrupt one is not.
+          console.warn('[map-editor] saveBytes rewrite failed — aborting save', e);
+          return null;
         }
       },
       redraw: () => { /* Pixi auto-renders; visibility/zoom effects handle prop changes */ },

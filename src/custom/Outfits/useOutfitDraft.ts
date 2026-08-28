@@ -70,12 +70,15 @@ export const useOutfitDraft = () => {
     markDirty();
   };
 
-  const addOutfit = () => {
+  /** Append a fresh outfit row and return its id, so the caller can select it. */
+  const addOutfit = (): string => {
+    const id = nextOutfitRowId();
     setDraft((prev) => ({
       ...prev,
-      rows: [...prev.rows, { id: nextOutfitRowId(), key: '', entry: { overworld: '', back_sprite: '' } }],
+      rows: [...prev.rows, { id, key: '', entry: { overworld: '', back_sprite: '' } }],
     }));
     markDirty();
+    return id;
   };
 
   const changeKey = (id: string, key: string) => {

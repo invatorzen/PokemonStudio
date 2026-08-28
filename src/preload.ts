@@ -34,6 +34,7 @@ import type { ProjectConfigsFromBackEnd, ReadProjectConfigsInput } from './backe
 import type { ProjectDataFromBackEnd, ReadProjectDataInput } from './backendTasks/readProjectData';
 import type { ReadProjectMetadataInput, ReadProjectMetadataOutput } from './backendTasks/readProjectMetadata';
 import type { ReadProjectTextInput } from './backendTasks/readProjectTexts';
+import type { ReadEventDialogueInput, ReadEventDialogueOutput } from './backendTasks/readEventDialogue';
 import type { ReadRMXPEventInput, ReadRMXPEventOutput } from './backendTasks/readRMXPEvents';
 import type { WriteRMXPEventsInput, WriteRMXPEventsOutput } from './backendTasks/writeRMXPEvents';
 import type { ReadRMXPSwitchNamesInput, ReadRMXPSwitchNamesOutput } from './backendTasks/readRMXPSwitchNames';
@@ -59,7 +60,37 @@ import type {
   SaveOutfitConfigInput,
   SaveOutfitConfigOutput,
 } from './backendTasks/outfitConfig';
+import type {
+  ReadCraftingConfigInput,
+  ReadCraftingConfigOutput,
+  SaveCraftingConfigInput,
+  SaveCraftingConfigOutput,
+} from './backendTasks/craftingConfig';
+import type {
+  ReadMapSettingsConfigInput,
+  ReadMapSettingsConfigOutput,
+  SaveMapSettingsConfigInput,
+  SaveMapSettingsConfigOutput,
+} from './backendTasks/mapSettingsConfig';
+import type {
+  ReadTypeChartsConfigInput,
+  ReadTypeChartsConfigOutput,
+  SaveTypeChartsConfigInput,
+  SaveTypeChartsConfigOutput,
+} from './backendTasks/typeChartsConfig';
 import type { ReadSosBattleInput, ReadSosBattleOutput, WriteSosBattleInput, WriteSosBattleOutput } from './backendTasks/sosBattle';
+import type {
+  ReadAmbientCriesConfigInput,
+  ReadAmbientCriesConfigOutput,
+  SaveAmbientCriesConfigInput,
+  SaveAmbientCriesConfigOutput,
+} from './backendTasks/ambientCriesConfig';
+import type {
+  ReadCriticalHealthAudioConfigInput,
+  ReadCriticalHealthAudioConfigOutput,
+  SaveCriticalHealthAudioConfigInput,
+  SaveCriticalHealthAudioConfigOutput,
+} from './backendTasks/criticalHealthAudioConfig';
 import type { ApplyDataPackInput, ApplyDataPackOutput, CheckDataPackEnvOutput } from './backendTasks/applyDataPack';
 import type { WriteRMXPSwitchNamesInput, WriteRMXPSwitchNamesOutput } from './backendTasks/writeRMXPSwitchNames';
 import type { ReadUmbraSwitchRegistryInput, ReadUmbraSwitchRegistryOutput } from './backendTasks/readUmbraSwitchRegistry';
@@ -155,6 +186,7 @@ contextBridge.exposeInMainWorld('api', {
   readProjectConfigs: defineBackendTask(ipcRenderer, 'read-project-configs'),
   readProjectData: defineBackendTask(ipcRenderer, 'read-project-data'),
   readProjectTexts: defineBackendTask(ipcRenderer, 'read-project-texts'),
+  readEventDialogue: defineBackendTask(ipcRenderer, 'read-event-dialogue'),
   migrateData: defineBackendTask(ipcRenderer, 'migrate-data'),
   fileExists: defineBackendTask(ipcRenderer, 'file-exists'),
   chooseFolder: defineBackendTask(ipcRenderer, 'choose-folder'),
@@ -198,8 +230,18 @@ contextBridge.exposeInMainWorld('api', {
   writeHiddenGrotto: defineBackendTask(ipcRenderer, 'write-hidden-grotto'),
   readOutfitConfig: defineBackendTask(ipcRenderer, 'read-outfit-config'),
   saveOutfitConfig: defineBackendTask(ipcRenderer, 'save-outfit-config'),
+  readCraftingConfig: defineBackendTask(ipcRenderer, 'read-crafting-config'),
+  saveCraftingConfig: defineBackendTask(ipcRenderer, 'save-crafting-config'),
+  readMapSettingsConfig: defineBackendTask(ipcRenderer, 'read-map-settings-config'),
+  saveMapSettingsConfig: defineBackendTask(ipcRenderer, 'save-map-settings-config'),
+  readTypeChartsConfig: defineBackendTask(ipcRenderer, 'read-type-charts-config'),
+  saveTypeChartsConfig: defineBackendTask(ipcRenderer, 'save-type-charts-config'),
   readSosBattle: defineBackendTask(ipcRenderer, 'read-sos-battle'),
   writeSosBattle: defineBackendTask(ipcRenderer, 'write-sos-battle'),
+  readAmbientCriesConfig: defineBackendTask(ipcRenderer, 'read-ambient-cries-config'),
+  saveAmbientCriesConfig: defineBackendTask(ipcRenderer, 'save-ambient-cries-config'),
+  readCriticalHealthAudioConfig: defineBackendTask(ipcRenderer, 'read-critical-health-audio-config'),
+  saveCriticalHealthAudioConfig: defineBackendTask(ipcRenderer, 'save-critical-health-audio-config'),
   applyDataPack: defineBackendTask(ipcRenderer, 'apply-data-pack'),
   checkDataPackEnv: defineBackendTask(ipcRenderer, 'check-data-pack-env'),
   writeRMXPSwitchNames: defineBackendTask(ipcRenderer, 'write-rmxp-switch-names'),
@@ -277,6 +319,7 @@ declare global {
       readProjectConfigs: BackendTaskWithGenericError<ReadProjectConfigsInput, ProjectConfigsFromBackEnd, GenericBackendProgress>;
       readProjectData: BackendTaskWithGenericError<ReadProjectDataInput, ProjectDataFromBackEnd, GenericBackendProgress>;
       readProjectTexts: BackendTaskWithGenericError<ReadProjectTextInput, ProjectText, GenericBackendProgress>;
+      readEventDialogue: BackendTaskWithGenericError<ReadEventDialogueInput, ReadEventDialogueOutput, GenericBackendProgress>;
       migrateData: BackendTaskWithGenericError<MigrateDataInput, MigrateDataOutput, GenericBackendProgress>;
       fileExists: BackendTaskWithGenericErrorAndNoProgress<FileExistsInput, FileExistsOutput>;
       chooseFolder: BackendTaskWithGenericErrorAndNoProgress<AnyObj, ChooseFolderOutput>;
@@ -320,8 +363,18 @@ declare global {
       writeHiddenGrotto: BackendTaskWithGenericErrorAndNoProgress<WriteHiddenGrottoInput, WriteHiddenGrottoOutput>;
       readOutfitConfig: BackendTaskWithGenericErrorAndNoProgress<ReadOutfitConfigInput, ReadOutfitConfigOutput>;
       saveOutfitConfig: BackendTaskWithGenericErrorAndNoProgress<SaveOutfitConfigInput, SaveOutfitConfigOutput>;
+      readCraftingConfig: BackendTaskWithGenericErrorAndNoProgress<ReadCraftingConfigInput, ReadCraftingConfigOutput>;
+      saveCraftingConfig: BackendTaskWithGenericErrorAndNoProgress<SaveCraftingConfigInput, SaveCraftingConfigOutput>;
+      readMapSettingsConfig: BackendTaskWithGenericErrorAndNoProgress<ReadMapSettingsConfigInput, ReadMapSettingsConfigOutput>;
+      saveMapSettingsConfig: BackendTaskWithGenericErrorAndNoProgress<SaveMapSettingsConfigInput, SaveMapSettingsConfigOutput>;
+      readTypeChartsConfig: BackendTaskWithGenericErrorAndNoProgress<ReadTypeChartsConfigInput, ReadTypeChartsConfigOutput>;
+      saveTypeChartsConfig: BackendTaskWithGenericErrorAndNoProgress<SaveTypeChartsConfigInput, SaveTypeChartsConfigOutput>;
       readSosBattle: BackendTaskWithGenericErrorAndNoProgress<ReadSosBattleInput, ReadSosBattleOutput>;
       writeSosBattle: BackendTaskWithGenericErrorAndNoProgress<WriteSosBattleInput, WriteSosBattleOutput>;
+      readAmbientCriesConfig: BackendTaskWithGenericErrorAndNoProgress<ReadAmbientCriesConfigInput, ReadAmbientCriesConfigOutput>;
+      saveAmbientCriesConfig: BackendTaskWithGenericErrorAndNoProgress<SaveAmbientCriesConfigInput, SaveAmbientCriesConfigOutput>;
+      readCriticalHealthAudioConfig: BackendTaskWithGenericErrorAndNoProgress<ReadCriticalHealthAudioConfigInput, ReadCriticalHealthAudioConfigOutput>;
+      saveCriticalHealthAudioConfig: BackendTaskWithGenericErrorAndNoProgress<SaveCriticalHealthAudioConfigInput, SaveCriticalHealthAudioConfigOutput>;
       applyDataPack: BackendTaskWithGenericErrorAndNoProgress<ApplyDataPackInput, ApplyDataPackOutput>;
       checkDataPackEnv: BackendTaskWithGenericErrorAndNoProgress<AnyObj, CheckDataPackEnvOutput>;
       writeRMXPSwitchNames: BackendTaskWithGenericErrorAndNoProgress<WriteRMXPSwitchNamesInput, WriteRMXPSwitchNamesOutput>;

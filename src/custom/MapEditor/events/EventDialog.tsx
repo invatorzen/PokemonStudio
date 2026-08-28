@@ -87,8 +87,9 @@ type Props = {
   onSave: (event: MapEvent) => void;
   onDelete: (id: number) => void;
   onClose: () => void;
-  /** Capture a PNG data URL of the current map, for the tone command's on-map preview. */
-  getMapSnapshot?: () => string | null;
+  /** Capture a PNG data URL of the current map, for the tone/fog command previews.
+   *  `maxWidth` caps the capture width (default 640; fog asks for a crisp one). */
+  getMapSnapshot?: (maxWidth?: number) => string | null;
   /** The id of the map being edited — a new Transfer Player defaults to it. */
   currentMapId?: number;
   /** Map size in tiles — frames the shake command's in-game preview. */

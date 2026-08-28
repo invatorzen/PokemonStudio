@@ -19,6 +19,8 @@ import WorldRouter from '@pages/world/World.Router.page';
 import SettingsRouter from '@pages/settings/Settings.Router.page';
 import OnlineRouter from '@pages/online/Online.Router.page';
 import OutfitsRouter from '@src/custom/Outfits/Outfits.Router.page';
+import CraftingRouter from '@src/custom/Crafting/Crafting.Router.page';
+import EventDialogueRouter from '@src/custom/EventDialogue/EventDialogue.Router.page';
 
 import './i18n';
 import DesignSystemRouterComponent from '@ds/DesignSystem.router';
@@ -47,6 +49,8 @@ const App = () => {
                 <Route path="/settings/*" element={<SettingsRouter />} />
                 <Route path="/online/*" element={<OnlineRouter />} />
                 <Route path="/outfits/*" element={<OutfitsRouter />} />
+                <Route path="/crafting/*" element={<CraftingRouter />} />
+                <Route path="/dialogues/*" element={<EventDialogueRouter />} />
                 <Route path="/account" />
                 <Route path="/designSystem/*" element={<DesignSystemRouterComponent />} />
                 <Route path="/compilation" element={<CompilationPage />} />

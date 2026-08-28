@@ -113,13 +113,15 @@ type Props = {
   speed: number;
   /** Raw stored frame count (PSDK doubles it at runtime). */
   duration: number;
+  /** Shake axis: 0 horizontal, 1 vertical, 2 both (diagonal). */
+  axis?: number;
   projectPath?: string;
   /** Map size in tiles — sets how many snapshot px make up one tile. */
   mapWidthTiles?: number;
   mapHeightTiles?: number;
 };
 
-export const ShakePreview: React.FC<Props> = ({ snapshotUrl, power, speed, duration, projectPath, mapWidthTiles, mapHeightTiles }) => {
+export const ShakePreview: React.FC<Props> = ({ snapshotUrl, power, speed, duration, axis = 0, projectPath, mapWidthTiles, mapHeightTiles }) => {
   const shakerRef = React.useRef<HTMLDivElement>(null);
   const frameRef = React.useRef<HTMLDivElement>(null);
   const canvasRef = React.useRef<HTMLCanvasElement>(null);
@@ -133,8 +135,8 @@ export const ShakePreview: React.FC<Props> = ({ snapshotUrl, power, speed, durat
   const [imgReady, setImgReady] = React.useState(false);
   const [charReady, setCharReady] = React.useState(false);
   const [runId, setRunId] = React.useState(0);
-  const paramsRef = React.useRef({ power, speed, duration });
-  paramsRef.current = { power, speed, duration };
+  const paramsRef = React.useRef({ power, speed, duration, axis });
+  paramsRef.current = { power, speed, duration, axis };
 
   // Per-project preview-character setting.
   const [charName, setCharName] = React.useState<string>(() => loadPreviewCharacter(projectPath));
@@ -226,7 +228,7 @@ export const ShakePreview: React.FC<Props> = ({ snapshotUrl, power, speed, durat
     if (runId === 0) return;
     const el = shakerRef.current;
     if (!el) return;
-    const { power: pw, speed: sp, duration: dur } = paramsRef.current;
+    const { power: pw, speed: sp, duration: dur, axis: ax } = paramsRef.current;
     let durationLeft = Math.max(0, dur) * 2;
     let raf = 0;
     let last = 0;
@@ -253,9 +255,12 @@ export const ShakePreview: React.FC<Props> = ({ snapshotUrl, power, speed, durat
         step();
         acc -= 1000 / 60;
       }
-      el.style.transform = `translateX(${shake.toFixed(2)}px)`;
+      // axis 0 horizontal, 1 vertical, 2 both (diagonal — same offset on both).
+      const tx = ax === 1 ? 0 : shake;
+      const ty = ax === 0 ? 0 : shake;
+      el.style.transform = `translate(${tx.toFixed(2)}px, ${ty.toFixed(2)}px)`;
       if (durationLeft < 1 && shake === 0) {
-        el.style.transform = 'translateX(0px)';
+        el.style.transform = 'translate(0px, 0px)';
         return;
       }
       raf = requestAnimationFrame(loop);
@@ -264,7 +269,7 @@ export const ShakePreview: React.FC<Props> = ({ snapshotUrl, power, speed, durat
     raf = requestAnimationFrame(loop);
     return () => {
       cancelAnimationFrame(raf);
-      el.style.transform = 'translateX(0px)';
+      el.style.transform = 'translate(0px, 0px)';
     };
   }, [runId]);
 

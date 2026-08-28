@@ -10,6 +10,8 @@ import { DashboardSavePage } from './Dashboard.Save.page';
 import { DashboardCreditsPage } from './Dashboard.Credits.page';
 import { DashboardGameOptionsPage } from './Dashboard.GameOptions.page';
 import { DashboardSosPage } from './Dashboard.Sos.page';
+import { DashboardAmbientCriesPage } from './Dashboard.AmbientCries.page';
+import { DashboardCriticalHealthAudioPage } from './Dashboard.CriticalHealthAudio.page';
 import { DashboardDataPacksPage } from './Dashboard.DataPacks.page';
 import { DashboardPage } from './Dashboard.page';
 import { DashboardGameStartPage } from './Dashboard.GameStart.page';
@@ -152,6 +154,22 @@ const DashboardRouterComponent = () => {
         element={
           <DashboardPageWithMenu>
             <DashboardDataPacksPage />
+          </DashboardPageWithMenu>
+        }
+      />
+      <Route
+        path="ambient-cries"
+        element={
+          <DashboardPageWithMenu>
+            <DashboardAmbientCriesPage />
+          </DashboardPageWithMenu>
+        }
+      />
+      <Route
+        path="critical-health-audio"
+        element={
+          <DashboardPageWithMenu>
+            <DashboardCriticalHealthAudioPage />
           </DashboardPageWithMenu>
         }
       />

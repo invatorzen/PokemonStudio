@@ -92,7 +92,7 @@ type Props = {
   mapEvents: { id: number; name: string }[];
   /** Label for the move-route "this event" subject (event/common-event name). */
   subjectName: string;
-  getMapSnapshot?: () => string | null;
+  getMapSnapshot?: (maxWidth?: number) => string | null;
   currentMapId?: number;
   mapWidthTiles?: number;
   mapHeightTiles?: number;
@@ -734,6 +734,8 @@ export const CommandListEditor = ({ list, setList, systemNames, mapEvents, subje
           setForm={setCmdForm}
           fogFiles={fogFiles}
           getMapSnapshot={getMapSnapshot}
+          mapWidthTiles={mapWidthTiles}
+          mapHeightTiles={mapHeightTiles}
           onSubmit={submitForm}
           onCancel={() => setCmdForm(null)}
         />
