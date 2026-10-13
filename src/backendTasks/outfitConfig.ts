@@ -3,6 +3,7 @@ import fs from 'fs';
 import path from 'path';
 import type { OutfitConfig, OutfitEntry } from '@src/custom/Outfits/types';
 import { defineBackendServiceFunction } from './defineBackendServiceFunction';
+import { mirrorPluginConfigs } from './pluginConfigMirror';
 
 /**
  * Read + write the Easy Outfits plugin config at
@@ -106,6 +107,7 @@ const saveOutfitConfig = async (payload: SaveOutfitConfigInput): Promise<SaveOut
     outfits,
   };
   fs.writeFileSync(filePath, JSON.stringify(toWrite, null, 2));
+  mirrorPluginConfigs(payload.projectPath); // refresh .rxdata mirrors for release builds
 
   log.info('save-outfit-config/success');
   return {};

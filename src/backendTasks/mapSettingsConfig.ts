@@ -4,6 +4,7 @@ import path from 'path';
 import type { MapSettingsConfig } from '@src/custom/MapSettings/types';
 import { buildDefaultMapSettingsConfig, isDefaultMapSettingsEntry, sanitizeMapSettingsConfig } from '@src/custom/MapSettings/types';
 import { defineBackendServiceFunction } from './defineBackendServiceFunction';
+import { mirrorPluginConfigs } from './pluginConfigMirror';
 
 /**
  * Read + write the per-map Settings config at
@@ -54,6 +55,7 @@ const saveMapSettingsConfig = async (payload: SaveMapSettingsConfigInput): Promi
     if (!isDefaultMapSettingsEntry(entry)) maps[key] = entry;
   });
   fs.writeFileSync(filePath, JSON.stringify({ maps }, null, 2));
+  mirrorPluginConfigs(payload.projectPath); // refresh .rxdata mirrors for release builds
   log.info('save-map-settings-config/success');
   return {};
 };

@@ -28,6 +28,7 @@ import { registerReadTypeChartsConfig, registerSaveTypeChartsConfig } from '@src
 import { registerReadSosBattle, registerWriteSosBattle } from '@src/backendTasks/sosBattle';
 import { registerReadAmbientCriesConfig, registerSaveAmbientCriesConfig } from '@src/backendTasks/ambientCriesConfig';
 import { registerReadCriticalHealthAudioConfig, registerSaveCriticalHealthAudioConfig } from '@src/backendTasks/criticalHealthAudioConfig';
+import { registerReadReleaseAssetsSelection, registerSaveReleaseAssetsSelection, registerScanReleaseAssets } from '@src/backendTasks/releaseAssets';
 import { registerApplyDataPack, registerCheckDataPackEnv } from '@src/backendTasks/applyDataPack';
 import { registerWriteRMXPSwitchNames } from '@src/backendTasks/writeRMXPSwitchNames';
 import { registerReadUmbraSwitchRegistry } from '@src/backendTasks/readUmbraSwitchRegistry';
@@ -249,6 +250,9 @@ registerReadMapSettingsConfig(ipcMain);
 registerSaveTypeChartsConfig(ipcMain);
 registerReadTypeChartsConfig(ipcMain);
 registerSaveCriticalHealthAudioConfig(ipcMain);
+registerScanReleaseAssets(ipcMain);
+registerReadReleaseAssetsSelection(ipcMain);
+registerSaveReleaseAssetsSelection(ipcMain);
 registerApplyDataPack(ipcMain);
 registerCheckDataPackEnv(ipcMain);
 registerWriteRMXPSwitchNames(ipcMain);

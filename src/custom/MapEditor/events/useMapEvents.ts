@@ -114,6 +114,81 @@ export const useMapEvents = (
   const getSeedRef = useRef(getSeedEvents);
   getSeedRef.current = getSeedEvents;
 
+  // ── Undo/redo for event edits ────────────────────────────────────────
+  // A SEPARATE timeline from the tile-cell history in MapEditorPage: event
+  // edits (create / delete / move / edit / duplicate) save through a
+  // different pipeline (writeRMXPEvents → .rxdata) with their own dirty flag,
+  // so they get their own stack rather than being interleaved with tile
+  // actions. MapEditorPage routes Ctrl+Z / the toolbar Undo button here when
+  // it's in Events mode.
+  //
+  // Each past/future entry is a full snapshot of the `events` array as it was
+  // BEFORE (past) / AFTER (future) a mutation. Snapshotting the array by
+  // reference is cheap and correct because every mutator below builds NEW
+  // event and array objects and never mutates an existing MapEvent in place —
+  // so a snapshot's element references keep pointing at the captured state
+  // even after `events` is replaced.
+  const EVENT_HISTORY_LIMIT = 200;
+  const eventsRef = useRef<MapEvent[]>([]);
+  const historyPastRef = useRef<MapEvent[][]>([]);
+  const historyFutureRef = useRef<MapEvent[][]>([]);
+  const [historyEpoch, setHistoryEpoch] = useState(0);
+  const bumpHistory = useCallback(() => setHistoryEpoch((n) => n + 1), []);
+
+  // Keep the ref in lockstep with state so mutators read the current array
+  // synchronously and snapshots capture the exact pre-mutation state.
+  useEffect(() => {
+    eventsRef.current = events;
+  }, [events]);
+
+  /** Drop the undo history — called whenever `events` is (re)loaded wholesale
+   *  (map switch, fresh read, or a save-then-reload). eventsRef re-syncs via
+   *  the effect above before any user action can push a new entry. */
+  const clearHistory = useCallback(() => {
+    historyPastRef.current = [];
+    historyFutureRef.current = [];
+    bumpHistory();
+  }, [bumpHistory]);
+
+  /** Apply a new events array, recording the pre-state for undo. */
+  const commit = useCallback((next: MapEvent[]) => {
+    historyPastRef.current.push(eventsRef.current);
+    if (historyPastRef.current.length > EVENT_HISTORY_LIMIT) historyPastRef.current.shift();
+    historyFutureRef.current = [];
+    eventsRef.current = next;
+    setEvents(next);
+    setDirty(true);
+    bumpHistory();
+  }, [bumpHistory]);
+
+  const undo = useCallback(() => {
+    const prev = historyPastRef.current.pop();
+    if (prev === undefined) return;
+    historyFutureRef.current.push(eventsRef.current);
+    eventsRef.current = prev;
+    setEvents(prev);
+    setDirty(true);
+    bumpHistory();
+  }, [bumpHistory]);
+
+  const redo = useCallback(() => {
+    const next = historyFutureRef.current.pop();
+    if (next === undefined) return;
+    historyPastRef.current.push(eventsRef.current);
+    eventsRef.current = next;
+    setEvents(next);
+    setDirty(true);
+    bumpHistory();
+  }, [bumpHistory]);
+
+  // Plain render-time reads (matching MapEditorPage's tile-history buttons):
+  // every stack mutation calls bumpHistory, so `historyEpoch` re-renders the
+  // consumer and these recompute. `historyEpoch` is referenced here purely to
+  // tie the recompute to that state.
+  void historyEpoch;
+  const canUndo = historyPastRef.current.length > 0;
+  const canRedo = historyFutureRef.current.length > 0;
+
   const reload = useCallback(() => {
     if (!projectPath || mapId === undefined) return;
     // Parked edits win over the file — they're strictly newer.
@@ -125,6 +200,7 @@ export const useMapEvents = (
       setError(null);
       setDirty(true);
       setLoading(false);
+      clearHistory();
       return;
     }
     setLoading(true);
@@ -165,6 +241,7 @@ export const useMapEvents = (
         setError(null);
         setDirty(false);
         setLoading(false);
+        clearHistory();
       },
       ({ errorMessage }) => {
         // Maps created purely by Studio may have no rxdata yet — treat as empty.
@@ -174,9 +251,10 @@ export const useMapEvents = (
         setError(errorMessage);
         setDirty(false);
         setLoading(false);
+        clearHistory();
       },
     );
-  }, [projectPath, mapId]);
+  }, [projectPath, mapId, clearHistory]);
 
   useEffect(() => reload(), [reload]);
 
@@ -212,43 +290,47 @@ export const useMapEvents = (
     });
   }, [projectPath, mapId, loadedMapId, events, skipped, mapWidth, mapHeight, tiledFilename, reload]);
 
+  // All mutators read the current array from eventsRef (kept in lockstep with
+  // state) and route through `commit`, which snapshots the pre-state so the
+  // change can be undone. Each is one undo step.
   const updateEvent = useCallback((updated: MapEvent) => {
-    setEvents((prev) => prev.map((e) => (e.id === updated.id ? updated : e)));
-    setDirty(true);
-  }, []);
+    commit(eventsRef.current.map((e) => (e.id === updated.id ? updated : e)));
+  }, [commit]);
 
   const createEvent = useCallback((x: number, y: number): MapEvent => {
-    let created: MapEvent | undefined;
-    setEvents((prev) => {
-      created = createEmptyEvent(nextEventId(prev), x, y);
-      return [...prev, created];
-    });
-    setDirty(true);
-    // setEvents runs synchronously enough for our callers (dialog opens after),
-    // but return a fallback just in case.
-    return created ?? createEmptyEvent(1, x, y);
-  }, []);
+    const created = createEmptyEvent(nextEventId(eventsRef.current), x, y);
+    commit([...eventsRef.current, created]);
+    return created;
+  }, [commit]);
 
   const deleteEvent = useCallback((id: number) => {
-    setEvents((prev) => prev.filter((e) => e.id !== id));
-    setDirty(true);
-  }, []);
+    commit(eventsRef.current.filter((e) => e.id !== id));
+  }, [commit]);
 
-  const moveEvent = useCallback((id: number, x: number, y: number) => {
-    setEvents((prev) => prev.map((e) => (e.id === id ? { ...e, x, y } : e)));
+  // `coalesce` folds a continuing drag into the single history entry the
+  // drag's first step already pushed — so dragging an event across N cells is
+  // ONE undo step, not N. EventsOverlay passes its `drag.moved` flag (false on
+  // the first step of a drag, true thereafter).
+  const moveEvent = useCallback((id: number, x: number, y: number, coalesce = false) => {
+    const next = eventsRef.current.map((e) => (e.id === id ? { ...e, x, y } : e));
+    if (!coalesce) {
+      commit(next);
+      return;
+    }
+    historyFutureRef.current = [];
+    eventsRef.current = next;
+    setEvents(next);
     setDirty(true);
-  }, []);
+    bumpHistory();
+  }, [commit, bumpHistory]);
 
   /** Paste helper: duplicate an event at a new position (pages keep their provenance = commands carried over). */
   const duplicateEvent = useCallback((sourceId: number, x: number, y: number) => {
-    setEvents((prev) => {
-      const source = prev.find((e) => e.id === sourceId);
-      if (!source) return prev;
-      const copy: MapEvent = { ...source, id: nextEventId(prev), x, y, pages: source.pages.map((p) => ({ ...p })) };
-      return [...prev, copy];
-    });
-    setDirty(true);
-  }, []);
+    const source = eventsRef.current.find((e) => e.id === sourceId);
+    if (!source) return;
+    const copy: MapEvent = { ...source, id: nextEventId(eventsRef.current), x, y, pages: source.pages.map((p) => ({ ...p })) };
+    commit([...eventsRef.current, copy]);
+  }, [commit]);
 
-  return { events, loading, error, dirty, skipped, loadedMapId, reload, save, updateEvent, createEvent, deleteEvent, moveEvent, duplicateEvent, createEmptyPage };
+  return { events, loading, error, dirty, skipped, loadedMapId, reload, save, updateEvent, createEvent, deleteEvent, moveEvent, duplicateEvent, createEmptyPage, undo, redo, canUndo, canRedo };
 };

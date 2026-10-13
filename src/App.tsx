@@ -1,3 +1,4 @@
+import { StudioDriverBridge } from '@src/custom/StudioDriver/StudioDriverBridge';
 import React from 'react';
 import { Toaster } from 'react-hot-toast';
 import { MemoryRouter, Routes, Route, Navigate } from 'react-router-dom';
@@ -36,6 +37,7 @@ const App = () => {
             <GlobalStyle />
             <UnsavedWarningModal />
             <MemoryRouter>
+              <StudioDriverBridge />
               <NavigationBarComponent />
               <Routes>
                 <Route path="/home" element={<HomePage />} />

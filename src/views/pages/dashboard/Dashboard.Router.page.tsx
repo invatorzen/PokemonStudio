@@ -12,6 +12,7 @@ import { DashboardGameOptionsPage } from './Dashboard.GameOptions.page';
 import { DashboardSosPage } from './Dashboard.Sos.page';
 import { DashboardAmbientCriesPage } from './Dashboard.AmbientCries.page';
 import { DashboardCriticalHealthAudioPage } from './Dashboard.CriticalHealthAudio.page';
+import { DashboardReleaseAssetsPage } from './Dashboard.ReleaseAssets.page';
 import { DashboardDataPacksPage } from './Dashboard.DataPacks.page';
 import { DashboardPage } from './Dashboard.page';
 import { DashboardGameStartPage } from './Dashboard.GameStart.page';
@@ -170,6 +171,14 @@ const DashboardRouterComponent = () => {
         element={
           <DashboardPageWithMenu>
             <DashboardCriticalHealthAudioPage />
+          </DashboardPageWithMenu>
+        }
+      />
+      <Route
+        path="release-assets"
+        element={
+          <DashboardPageWithMenu>
+            <DashboardReleaseAssetsPage />
           </DashboardPageWithMenu>
         }
       />

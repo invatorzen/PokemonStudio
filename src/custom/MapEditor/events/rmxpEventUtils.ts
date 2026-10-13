@@ -20,13 +20,24 @@ export const MOVE_TYPES = ['fixed', 'random', 'approach', 'custom'] as const;
 export const CUSTOM_MOVE_TYPE = MOVE_TYPES.indexOf('custom');
 export const MOVE_SPEEDS = ['slowest', 'slower', 'slow', 'fast', 'faster', 'fastest'] as const; // 1..6
 export const MOVE_FREQS = ['lowest', 'lower', 'low', 'high', 'higher', 'highest'] as const; // 1..6
-/** RMXP direction values → row index in a 4×4 character sheet. */
-export const DIRECTION_TO_ROW: Record<number, number> = { 2: 0, 4: 1, 6: 2, 8: 3 };
+/**
+ * Direction value → row index in a character sheet. 2/4/6/8 are the RMXP
+ * cardinals (rows 0-3). 10/12/14/16 are Umbra's 8-dir diagonals — BL/BR/TL/TR —
+ * living in rows 4-7 of an 8-row (8-dir) sheet.
+ */
+export const DIRECTION_TO_ROW: Record<number, number> = { 2: 0, 4: 1, 6: 2, 8: 3, 10: 4, 12: 5, 14: 6, 16: 7 };
 export const DIRECTIONS = [
   { value: 2, key: 'down' },
   { value: 4, key: 'left' },
   { value: 6, key: 'right' },
   { value: 8, key: 'up' },
+] as const;
+/** Umbra 8-dir diagonals, offered only when the selected sheet is 8-directional. */
+export const DIAGONAL_DIRECTIONS = [
+  { value: 10, key: 'down_left' },
+  { value: 12, key: 'down_right' },
+  { value: 14, key: 'up_left' },
+  { value: 16, key: 'up_right' },
 ] as const;
 
 // --- factories ---------------------------------------------------------------

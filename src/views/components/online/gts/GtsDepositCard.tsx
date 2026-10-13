@@ -101,26 +101,40 @@ const RawJson = styled.pre`
   margin: 0;
 `;
 
-/** Best-effort map of the PSDK creature blob onto the GiftCreature card shape. */
+/** PSDK stat order (Configs.stats indexes) used by GiftCreature `stats` / `bonus`. */
+const STAT_ORDER = ['hp', 'atk', 'dfe', 'spd', 'ats', 'dfs'] as const;
+
+/**
+ * Map a GTS creature onto the GiftCreature card shape. GTS creatures use the
+ * server's safe JSON format (Umbra-OnlineServer src/gts/creature.ts): db_symbols,
+ * `moves` as `{ id, pp, ppMax }`, `ivs` / `evs` as named stat blocks, `otName` /
+ * `otId`, `happiness`, `ball`.
+ */
 const gtsCreatureToGift = (c: Record<string, unknown>): GiftCreature => {
   const str = (v: unknown) => (typeof v === 'string' ? v : undefined);
   const num = (v: unknown) => (typeof v === 'number' ? v : undefined);
+  const statArray = (block: unknown) => {
+    if (!block || typeof block !== 'object') return undefined;
+    const b = block as Record<string, unknown>;
+    return STAT_ORDER.map((key) => Number(b[key] ?? 0)) as [number, number, number, number, number, number];
+  };
   return {
-    id: String((c.speciesId ?? c.id ?? '') as string | number),
+    id: String((c.speciesId ?? '') as string),
     level: Number(c.level ?? 1),
     shiny: typeof c.shiny === 'boolean' ? c.shiny : undefined,
     form: num(c.form),
     gender: num(c.gender),
-    nature: c.nature as GiftCreature['nature'],
-    ability: c.ability as GiftCreature['ability'],
-    item: c.item as GiftCreature['item'],
-    stats: c.stats as GiftCreature['stats'],
-    bonus: Array.isArray(c.bonus) ? (c.bonus as number[]) : undefined,
-    moves: Array.isArray(c.moves) ? (c.moves as string[]) : undefined,
-    given_name: str(c.given_name) ?? str(c.nickname),
-    loyalty: num(c.loyalty),
-    trainer_name: (str(c.trainerName) ?? str(c.trainer_name)) as string | undefined,
-    trainer_id: num(c.trainer_id),
+    nature: str(c.nature),
+    ability: str(c.ability),
+    item: str(c.item),
+    captured_with: str(c.ball),
+    stats: statArray(c.ivs),
+    bonus: statArray(c.evs),
+    moves: Array.isArray(c.moves) ? c.moves.map((m) => String((m as { id?: unknown })?.id ?? '')) : undefined,
+    given_name: str(c.nickname),
+    loyalty: num(c.happiness),
+    trainer_name: str(c.otName),
+    trainer_id: num(c.otId),
   };
 };
 

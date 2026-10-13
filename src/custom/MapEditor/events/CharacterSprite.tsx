@@ -43,6 +43,24 @@ export const useImageSize = (src: string | null): { w: number; h: number } | nul
   return size;
 };
 
+/**
+ * Frame (width / 4) must be at least this many px wide for a 2:1-tall sheet to
+ * count as 8-dir. A tall 4-dir sheet (16×32 frames → 64×128) is also twice as
+ * tall as wide, so `h === 2·w` alone is ambiguous; Umbra's real 8-dir sheets
+ * use 32/54px frames while tall 4-dir sheets use 16px, so 24 splits them.
+ * Mirrors the runtime EIGHT_DIR_MIN_FRAME.
+ */
+const EIGHT_DIR_MIN_FRAME = 24;
+
+/**
+ * Whether a sheet is 8-directional (8 rows) rather than 4-dir (4 rows). An
+ * 8-dir sheet is exactly twice as tall as it is wide (h === 2·w) AND its frames
+ * are wide enough (≥ EIGHT_DIR_MIN_FRAME) to not be a tall 4-dir sheet. Mirrors
+ * the runtime Game_Character#eight_dir_sprite? detection.
+ */
+export const isEightDirSize = (size: { w: number; h: number } | null): boolean =>
+  !!size && size.w > 0 && size.h === size.w * 2 && size.w / 4 >= EIGHT_DIR_MIN_FRAME;
+
 type CharacterSpriteProps = {
   projectPath: string;
   characterName: string;
@@ -69,7 +87,8 @@ export const CharacterSprite = ({ projectPath, characterName, direction, pattern
   const size = useImageSize(src);
   if (!src || !size) return null;
   const cellW = size.w / 4;
-  const cellH = size.h / 4;
+  // 8-dir sheets have 8 rows (h === 2·w); 4-dir sheets have 4. Always 4 columns.
+  const cellH = size.h / (isEightDirSize(size) ? 8 : 4);
   let scale: number;
   if (exactScale !== undefined) {
     // Map view: true footprint, no snapping — accuracy beats crispness here.

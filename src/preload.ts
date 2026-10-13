@@ -91,6 +91,14 @@ import type {
   SaveCriticalHealthAudioConfigInput,
   SaveCriticalHealthAudioConfigOutput,
 } from './backendTasks/criticalHealthAudioConfig';
+import type {
+  ReadReleaseAssetsSelectionInput,
+  ReadReleaseAssetsSelectionOutput,
+  SaveReleaseAssetsSelectionInput,
+  SaveReleaseAssetsSelectionOutput,
+  ScanReleaseAssetsInput,
+  ScanReleaseAssetsOutput,
+} from './backendTasks/releaseAssets';
 import type { ApplyDataPackInput, ApplyDataPackOutput, CheckDataPackEnvOutput } from './backendTasks/applyDataPack';
 import type { WriteRMXPSwitchNamesInput, WriteRMXPSwitchNamesOutput } from './backendTasks/writeRMXPSwitchNames';
 import type { ReadUmbraSwitchRegistryInput, ReadUmbraSwitchRegistryOutput } from './backendTasks/readUmbraSwitchRegistry';
@@ -242,6 +250,9 @@ contextBridge.exposeInMainWorld('api', {
   saveAmbientCriesConfig: defineBackendTask(ipcRenderer, 'save-ambient-cries-config'),
   readCriticalHealthAudioConfig: defineBackendTask(ipcRenderer, 'read-critical-health-audio-config'),
   saveCriticalHealthAudioConfig: defineBackendTask(ipcRenderer, 'save-critical-health-audio-config'),
+  scanReleaseAssets: defineBackendTask(ipcRenderer, 'scan-release-assets'),
+  readReleaseAssetsSelection: defineBackendTask(ipcRenderer, 'read-release-assets-selection'),
+  saveReleaseAssetsSelection: defineBackendTask(ipcRenderer, 'save-release-assets-selection'),
   applyDataPack: defineBackendTask(ipcRenderer, 'apply-data-pack'),
   checkDataPackEnv: defineBackendTask(ipcRenderer, 'check-data-pack-env'),
   writeRMXPSwitchNames: defineBackendTask(ipcRenderer, 'write-rmxp-switch-names'),
@@ -375,6 +386,9 @@ declare global {
       saveAmbientCriesConfig: BackendTaskWithGenericErrorAndNoProgress<SaveAmbientCriesConfigInput, SaveAmbientCriesConfigOutput>;
       readCriticalHealthAudioConfig: BackendTaskWithGenericErrorAndNoProgress<ReadCriticalHealthAudioConfigInput, ReadCriticalHealthAudioConfigOutput>;
       saveCriticalHealthAudioConfig: BackendTaskWithGenericErrorAndNoProgress<SaveCriticalHealthAudioConfigInput, SaveCriticalHealthAudioConfigOutput>;
+      scanReleaseAssets: BackendTaskWithGenericErrorAndNoProgress<ScanReleaseAssetsInput, ScanReleaseAssetsOutput>;
+      readReleaseAssetsSelection: BackendTaskWithGenericErrorAndNoProgress<ReadReleaseAssetsSelectionInput, ReadReleaseAssetsSelectionOutput>;
+      saveReleaseAssetsSelection: BackendTaskWithGenericErrorAndNoProgress<SaveReleaseAssetsSelectionInput, SaveReleaseAssetsSelectionOutput>;
       applyDataPack: BackendTaskWithGenericErrorAndNoProgress<ApplyDataPackInput, ApplyDataPackOutput>;
       checkDataPackEnv: BackendTaskWithGenericErrorAndNoProgress<AnyObj, CheckDataPackEnvOutput>;
       writeRMXPSwitchNames: BackendTaskWithGenericErrorAndNoProgress<WriteRMXPSwitchNamesInput, WriteRMXPSwitchNamesOutput>;

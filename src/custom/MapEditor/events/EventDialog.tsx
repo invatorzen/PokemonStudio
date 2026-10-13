@@ -3,11 +3,14 @@ import { useTranslation } from 'react-i18next';
 import { useGlobalState } from '@src/GlobalStateProvider';
 import { Toggle } from '@components/inputs';
 import { playSound } from '@utils/sound';
+import { useGetEntityNameText } from '@utils/ReadingProjectText';
+import { useProjectMaps } from '@hooks/useProjectData';
 import type { MapEvent, MapEventPage } from './useMapEvents';
 import {
   composeEventName,
   createEmptyPage,
   DIRECTIONS,
+  DIAGONAL_DIRECTIONS,
   getZTag,
   hasShadowlessTag,
   MOVE_FREQS,
@@ -22,7 +25,7 @@ import {
   type WorkingCommand,
 } from './rmxpEventUtils';
 import { buildBerryTreeScript, buildBerryInteractionTree } from './dialog/commandModel';
-import { AnimatedCharacterPreview, CharacterSprite } from './CharacterSprite';
+import { AnimatedCharacterPreview, CharacterSprite, characterSrc, useImageSize, isEightDirSize } from './CharacterSprite';
 import {
   Block,
   BlockTitle,
@@ -122,6 +125,14 @@ export const EventDialog = ({ event, mapEvents, onSave, onDelete, onClose, getMa
   const { t } = useTranslation();
   const [{ projectPath, projectData }] = useGlobalState();
   const { draft, commitDraft, undo, redo, canUndo, canRedo } = useEventDraft(event);
+  // The page's own move route needs the map for "Go to tile…" (the Set Move Route
+  // command gets it from CommandListEditor).
+  const { projectDataValues: studioMaps } = useProjectMaps();
+  const getEntityName = useGetEntityNameText();
+  const studioMap = currentMapId !== undefined ? Object.values(studioMaps).find((m) => m.id === currentMapId) : undefined;
+  const currentMapForRoute = studioMap
+    ? { id: studioMap.id, name: getEntityName({ klass: 'Map', id: studioMap.id }) || `Map ${studioMap.id}`, tiledFilename: studioMap.tiledFilename }
+    : undefined;
   const [pageIndex, setPageIndex] = useState(0);
   const [pageClipboard, setPageClipboard] = useState<MapEventPage | null>(pageClipboardShared);
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -170,6 +181,10 @@ export const EventDialog = ({ event, mapEvents, onSave, onDelete, onClose, getMa
   }, [projectPath]);
 
   const page = draft.pages[pageIndex] ?? draft.pages[0];
+  // Offer the 4 diagonal directions too when the page graphic is an 8-dir sheet
+  // (h === 2·w), matching the runtime. 4-dir sheets keep just the 4 cardinals.
+  const graphicSize = useImageSize(projectPath && page.graphic.characterName ? characterSrc(projectPath, page.graphic.characterName) : null);
+  const graphicDirections = isEightDirSize(graphicSize) ? [...DIRECTIONS, ...DIAGONAL_DIRECTIONS] : DIRECTIONS;
 
   useEffect(() => {
     if (!pickerOpen || !projectPath || characterFiles.length > 0) return;
@@ -286,6 +301,7 @@ export const EventDialog = ({ event, mapEvents, onSave, onDelete, onClose, getMa
       ...createEmptyPage(),
       trigger: 3,
       isStepAnime: true,
+      isDirectionFix: true,
       graphic: { ...graphic },
       list: [
         ...buildTextChain(355, buildBerryTreeScript(dbSymbol, stage), 0),
@@ -297,6 +313,7 @@ export const EventDialog = ({ event, mapEvents, onSave, onDelete, onClose, getMa
       ...createEmptyPage(),
       trigger: 0,
       isStepAnime: true,
+      isDirectionFix: true,
       graphic: { ...graphic },
       condition: { ...createEmptyPage().condition, isSelfSwitch: true, selfSwitch: 'A' },
       list: includeInteraction
@@ -574,7 +591,7 @@ export const EventDialog = ({ event, mapEvents, onSave, onDelete, onClose, getMa
                 <Row style={{ marginTop: 8 }}>
                   <Dim>{t('me_events_direction')}</Dim>
                   <SmallSelect value={page.graphic.direction} onChange={(e) => patchGraphic({ direction: Number(e.target.value) })}>
-                    {DIRECTIONS.map((d) => (
+                    {graphicDirections.map((d) => (
                       <option key={d.value} value={d.value}>{t(`me_events_dir_${d.key}`)}</option>
                     ))}
                   </SmallSelect>
@@ -642,6 +659,7 @@ export const EventDialog = ({ event, mapEvents, onSave, onDelete, onClose, getMa
             systemNames={systemNames}
             audioFiles={audioFiles}
             mapEvents={mapEvents.map((e) => ({ id: e.id, name: stripNameTags(e.name) }))}
+            currentMap={currentMapForRoute}
             onApply={(route) => {
               patchPage({ moveRoute: route });
               setMoveRouteOpen(false);

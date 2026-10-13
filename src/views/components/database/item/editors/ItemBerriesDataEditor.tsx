@@ -291,7 +291,11 @@ export const ItemBerriesDataEditor = forwardRef<EditorHandlingClose>((_, ref) =>
             <GraphicResourceContainer onDrop={onDropGraphic} onDragOver={onDragOverGraphic}>
               <div className="preview" title={graphicName || t('berries_event_graphic_default')}>
                 {projectPath && graphicName ? (
-                  <CharacterSprite projectPath={projectPath} characterName={graphicName} direction={2} pattern={0} fitW={64} fitH={64} maxScale={2} />
+                  // A berry-tree charset lays its growth stages out by row, with the
+                  // fully-grown/harvestable stage in the last (fourth) row. Since the
+                  // preview shows a single frame, show that stage — direction 8 maps to
+                  // row 3 (DIRECTION_TO_ROW), pattern 0 is its first frame.
+                  <CharacterSprite projectPath={projectPath} characterName={graphicName} direction={8} pattern={0} fitW={64} fitH={64} maxScale={2} />
                 ) : (
                   <span className="empty">{t('berries_event_graphic_default')}</span>
                 )}

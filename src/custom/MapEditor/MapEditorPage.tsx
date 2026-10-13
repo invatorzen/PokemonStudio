@@ -1097,16 +1097,41 @@ export const MapEditorPage = () => {
     if (loaded) canvasRef.current?.redraw();
   }, [layerVisibility, loaded]);
 
+  // Undo/redo routing — refs read live at call time so the stable trampolines
+  // below (and the window keydown handler, whose closure would otherwise go
+  // stale) always see the current mode and event-history callbacks.
+  //   • Events mode: drive the event timeline (useMapEvents), UNLESS an event
+  //     dialog / delete-confirm is open — undoing the event you're mid-edit
+  //     would be jarring, so we no-op there.
+  //   • Tiles mode: drive the tile-cell history walker (onUndoRef/onRedoRef).
+  const editorModeRef = useRef(editorMode);
+  editorModeRef.current = editorMode;
+  const eventUndoRef = useRef<() => void>(mapEvents.undo);
+  eventUndoRef.current = mapEvents.undo;
+  const eventRedoRef = useRef<() => void>(mapEvents.redo);
+  eventRedoRef.current = mapEvents.redo;
+  // Set below once openEventId / deleteConfirm exist; read at call time.
+  const eventDialogOpenRef = useRef(false);
+
   // Stable trampolines — onUndoRef.current is bound in a useEffect after
   // the typed history walker has access to canvasRef + bumpHistory.
   const onUndo = useCallback(() => {
+    if (editorModeRef.current === 'events') {
+      if (!eventDialogOpenRef.current) eventUndoRef.current?.();
+      return;
+    }
     onUndoRef.current?.();
   }, []);
   const onUndoRef = useRef<(() => void) | undefined>(undefined);
   const onRedo = useCallback(() => {
+    if (editorModeRef.current === 'events') {
+      if (!eventDialogOpenRef.current) eventRedoRef.current?.();
+      return;
+    }
     onRedoRef.current?.();
   }, []);
   const onRedoRef = useRef<(() => void) | undefined>(undefined);
+  eventDialogOpenRef.current = openEventId !== null || !!deleteConfirm;
 
   const zoomBy = useCallback((direction: 1 | -1) => {
     setZoom((cur) => {
@@ -1193,7 +1218,9 @@ export const MapEditorPage = () => {
       // Tool hotkeys (Tiled defaults where they exist; the rest match the
       // first letter of the tool name). These are tile-authoring tools, so
       // they're inert in Events mode — and Shift+E belongs to the mode switch.
-      if (editorMode !== 'tiles' || e.shiftKey) return;
+      // Read the mode from the ref: this handler's closure captures editorMode
+      // once (deps below don't include it), so the state value here is stale.
+      if (editorModeRef.current !== 'tiles' || e.shiftKey) return;
       switch (lower) {
         case 'b': setTool('stamp'); break;
         case 'e': setTool('erase'); break;
@@ -1707,11 +1734,11 @@ export const MapEditorPage = () => {
 
       const focus = lastFocusRef.current;
       if (focus === 'event' && selectedEventId != null) {
-        const ev = mapEvents.events.find((x) => x.id === selectedEventId);
-        const name = ev?.name?.trim() || `Event ${selectedEventId}`;
         e.preventDefault();
-        if (skipDeleteWarn) performDelete({ kind: 'event', id: selectedEventId });
-        else setDeleteConfirm({ kind: 'event', id: selectedEventId, name });
+        // Deleting an event is undoable (Ctrl+Z in Events mode), so skip the
+        // confirm and remove it straight away. Layers still prompt below —
+        // their tile contents ride the tile-history undo separately.
+        performDelete({ kind: 'event', id: selectedEventId });
       } else if (focus === 'layer' && loaded) {
         // Delete every selected tile layer (multi-select); fall back to the
         // active layer if the selection is somehow empty. System layers aren't
@@ -1727,7 +1754,7 @@ export const MapEditorPage = () => {
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [selectedEventId, activeLayer, selectedLayers, loaded, skipDeleteWarn, performDelete, openEventId, deleteConfirm, mapEvents.events]);
+  }, [selectedEventId, activeLayer, selectedLayers, loaded, skipDeleteWarn, performDelete, openEventId, deleteConfirm]);
 
   const onMoveLayer = useCallback(async (from: number, to: number) => {
     if (!canvasRef.current) return;
@@ -2230,15 +2257,15 @@ export const MapEditorPage = () => {
           <Spacer />
           <DarkButton
             onClick={onUndo}
-            disabled={historyPastRef.current.length === 0}
-            title="Undo (Ctrl+Z)"
+            disabled={editorMode === 'events' ? !mapEvents.canUndo : historyPastRef.current.length === 0}
+            title={editorMode === 'events' ? 'Undo event change (Ctrl+Z)' : 'Undo (Ctrl+Z)'}
           >
             ↶ Undo
           </DarkButton>
           <DarkButton
             onClick={onRedo}
-            disabled={historyFutureRef.current.length === 0}
-            title="Redo (Ctrl+Shift+Z)"
+            disabled={editorMode === 'events' ? !mapEvents.canRedo : historyFutureRef.current.length === 0}
+            title={editorMode === 'events' ? 'Redo event change (Ctrl+Shift+Z)' : 'Redo (Ctrl+Shift+Z)'}
           >
             ↷ Redo
           </DarkButton>

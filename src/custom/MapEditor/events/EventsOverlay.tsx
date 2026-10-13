@@ -69,7 +69,7 @@ type Props = {
   onSelect: (id: number | null) => void;
   onOpen: (id: number) => void;
   onCreate: (x: number, y: number) => void;
-  onMove: (id: number, x: number, y: number) => void;
+  onMove: (id: number, x: number, y: number, coalesce?: boolean) => void;
 };
 
 export const EventsOverlay = ({ events, tileSize, mode, visible, selectedId, onSelect, onOpen, onCreate, onMove }: Props) => {
@@ -115,10 +115,13 @@ export const EventsOverlay = ({ events, tileSize, mode, visible, selectedId, onS
       if (cell.x === drag.startX && cell.y === drag.startY && !drag.moved) return;
       // Don't drop onto another event's tile.
       if (events.some((ev) => ev.id !== drag.id && ev.x === cell.x && ev.y === cell.y)) return;
+      // `moved` is false on the first step of a drag, true after — pass it as
+      // the coalesce flag so the whole drag folds into ONE undo entry.
+      const continuing = drag.moved;
       drag.moved = true;
       drag.startX = cell.x;
       drag.startY = cell.y;
-      onMove(drag.id, cell.x, cell.y);
+      onMove(drag.id, cell.x, cell.y, continuing);
     },
     [cellFromMouse, events, onMove],
   );

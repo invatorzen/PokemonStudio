@@ -3,6 +3,7 @@ import fs from 'fs';
 import path from 'path';
 import type { HiddenGrottoConfig } from '@src/custom/Grotto/types';
 import { defineBackendServiceFunction } from './defineBackendServiceFunction';
+import { mirrorPluginConfigs } from './pluginConfigMirror';
 
 /**
  * Read + write the Hidden Grottos plugin config at
@@ -85,6 +86,7 @@ const writeHiddenGrotto = async (payload: WriteHiddenGrottoInput): Promise<Write
   // config always keeps its PSDK class regardless of what the renderer sent.
   const toWrite = { ...payload.config, klass: HIDDEN_GROTTO_KLASS };
   fs.writeFileSync(filePath, JSON.stringify(toWrite, null, 2));
+  mirrorPluginConfigs(payload.projectPath); // refresh .rxdata mirrors for release builds
 
   log.info('write-hidden-grotto/success');
   return {};

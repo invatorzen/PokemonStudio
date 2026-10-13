@@ -12,6 +12,7 @@ import { useLoaderRef } from '@utils/loaderContext';
 import { State, useGlobalState } from '@src/GlobalStateProvider';
 import { updateProjectStudio } from '@utils/projectList';
 import React from 'react';
+import { ReleaseAssetsBuildSummary } from '@src/custom/ReleaseAssets/ReleaseAssetsBuildSummary';
 
 const initForm = (gameInfo: StudioInfoConfig, state: State): StudioCompilation => {
   return {
@@ -93,6 +94,7 @@ export const CompilationDialog = ({ closeDialog }: CompilationDialogProps) => {
           <Input name="gameVersion" placeholder={gameInfo.gameVersion + 1} label={t('version_number')} labelLeft onInput={onInputTouched} />
         </div>
         <CompilationOptions defaults={defaults} />
+        <ReleaseAssetsBuildSummary closeDialog={closeDialog} />
         <div className="actions">
           <span className="executable-info">{getExecutableInfoText(t)}</span>
           <PrimaryButton onClick={onClickCompile}>{t('compile_project')}</PrimaryButton>

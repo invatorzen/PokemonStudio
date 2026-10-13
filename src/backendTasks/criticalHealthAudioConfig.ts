@@ -9,6 +9,7 @@ import {
   buildDefaultCriticalHealthAudioConfig,
 } from '@src/custom/CriticalHealthAudio/types';
 import { defineBackendServiceFunction } from './defineBackendServiceFunction';
+import { mirrorPluginConfigs } from './pluginConfigMirror';
 
 /**
  * Read + write the Critical Health Audio plugin config at
@@ -99,6 +100,7 @@ const saveCriticalHealthAudioConfig = async (payload: SaveCriticalHealthAudioCon
   // Re-emit only the known keys, in the documented order, both sub-objects present.
   const toWrite = sanitize(payload.config);
   fs.writeFileSync(filePath, JSON.stringify(toWrite, null, 2));
+  mirrorPluginConfigs(payload.projectPath); // refresh .rxdata mirrors for release builds
 
   log.info('save-critical-health-audio-config/success');
   return {};

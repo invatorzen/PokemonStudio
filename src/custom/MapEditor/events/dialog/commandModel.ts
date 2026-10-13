@@ -195,12 +195,19 @@ export type CmdForm = {
   /** Change Map Settings → Battleback (204 target 2). */
   battlebackName: string;
   /**
-   * Start Trainer Battle → PSDK's start_trainer_battle(id, bgm:, troop_id:).
+   * Start Trainer Battle → PSDK's start_trainer_battle(id, bgm:, disable:, enable:, troop_id:, can_lose:).
    * troop 3 = Trainer, 4 = Gym Leader, 5 = Elite, 6 = Champion.
+   * `trainerDisable` is the self-switch turned OFF when the battle starts,
+   * `trainerEnable` the one turned ON by a victory (PSDK defaults A / B).
+   * `trainerCanLose` = continue the event after a defeat instead of blacking
+   * out (Umbra `00070 TrainerBattleCanLose.rb`).
    */
   trainerId: number;
   trainerBgm: string;
   trainerTroop: number;
+  trainerDisable: string;
+  trainerEnable: string;
+  trainerCanLose: boolean;
   /**
    * SOS Battle → the cc-sos-battles interpreter's
    * sos_battle(enabled:, species:, trainers:). Configures the SOS mechanic for
@@ -430,7 +437,7 @@ export const emptyForm = (kind: CmdFormKind, mode: 'insert' | 'edit'): CmdForm =
   panoramaName: '__undef__', panoramaHue: 0,
   battlebackName: '__undef__',
   // Trainer 5's a common demo id; troop 3 = standard Trainer battle.
-  trainerId: 1, trainerBgm: '__undef__', trainerTroop: 3,
+  trainerId: 1, trainerBgm: '__undef__', trainerTroop: 3, trainerDisable: 'A', trainerEnable: 'B', trainerCanLose: false,
   sosEnabled: true, sosSpecies: [], sosTrainers: [],
   bossEnabled: false, bossConfig: emptyBossConfig(), bossBattleId: 1, bossMons: [emptyBossMon()],
   shadowEnabled: false, heartGauge: 0,
@@ -1500,45 +1507,157 @@ export const buildBerryTreeScript = (itemSymbol: string, stage: number): string 
 export const BERRY_TAKE_SCRIPT = 'berry_take';
 export const BERRY_WATER_SCRIPT = 'berry_water';
 export const BERRY_PLANT_SCRIPT = 'berry_plant_from_bag';
+export const BERRY_FERTILIZE_SCRIPT = 'berry_fertilize';
+// Fills the message text vars ([BERRY]/[BERRIES]/[BERRY_QUANTITY]) before a
+// berry Show Text; berry_read_status adds [SOIL_STATE]/[MULCH_NAME]/[TIME_LEFT].
+export const BERRY_READ_INFO_SCRIPT = 'berry_read_info';
+export const BERRY_READ_STATUS_SCRIPT = 'berry_read_status';
+// Project command (Invatorzen_Commands) that clears all PSDK text vars.
+export const RESET_TEXT_VARS_SCRIPT = 'reset_text_vars';
 // Berry queries usable as raw script conditions in a Conditional Branch.
 export const BERRY_QUERY_SCRIPTS = ['berry_here?', 'berry_ripe?', 'berry_watered?', 'berry_stage == 4'] as const;
-
-// Default, editable Show Message text baked into the Berry Tree Interaction
-// template. Kept in English (the map text lives in the saved data, not i18n);
-// the user edits the generated 101 commands afterwards.
-const BERRY_HARVEST_MESSAGE = 'The berries are ripe! You pick them.';
-const BERRY_GROWING_MESSAGE = 'This tree is still growing. You water it.';
+// CSV text file (Data/Text/Dialogs/400501.csv) holding the berry-tree scaffold
+// messages AND choice labels, so everything is translatable (like common event
+// 18's file 38) and the dynamic name/count/status flow through PSDK text vars
+// filled by berry_read_info / berry_read_status. Row map — MESSAGES: 0 empty
+// soil · 1 ripe · 2 picked · 3-6 growth stages 0-3 · 7 moist · 8 dry · 9 watered
+// · 10 no-can · 11 already-mulched · 12 mulch-applied · 13 no-mulch · 14 ripe
+// status · 15 growing status. CHOICE LABELS: 16 Pick · 17 Check status · 18
+// Leave · 19 Water · 20 Add mulch · 21 Plant.
+const BERRY_TEXT_FILE = 400501;
+// Harvest jingle, mirroring common event 18. It lives in Audio/me/, so it's a
+// Play ME (code 249), not an SE.
+const BERRY_HARVEST_ME = 'ROSA_EggReceived';
+// PSDK temp variable (Yuki::Var::TMP1 = 26) used as transient scratch for the
+// message()+choices pick — it's written by message() and read by the very next
+// conditional, exactly the "overwrite immediately" use temps are meant for, so
+// no permanent variable is reserved.
+const BERRY_MENU_VAR = 'Yuki::Var::TMP1';
 
 /**
  * Berry Tree Interaction — expands on insert into a REAL, editable command tree
- * (no black-box helper): two nested script-condition branches wrapping the berry
- * action scripts and Show Message commands, in the canonical 3-state structure:
+ * (no black-box helper) reproducing an authentic Pokémon berry plot on the
+ * project's berry plugin (Umbra's BerryPots mechanics). All text + choice labels
+ * live in CSV file 400501; the dynamic name/plural/count/status flow through PSDK
+ * text vars filled by berry_read_info / berry_read_status.
  *
+ * Prompts use PSDK's `message(text, cancel, *choices)` command (one call shows
+ * the text AND the choice box, returning the 0-based pick) rather than a separate
+ * Show Text + Show Choices pair; the pick is stored in $game_variables[497] and
+ * branched with conditionals. Plain (choice-less) lines stay Show Text \t[…].
+ *
+ *   reset_text_vars
  *   if berry_here?
- *     if berry_ripe?      -> Show harvest msg + berry_take
- *     else (growing)      -> Show growing msg + berry_water
- *   else (empty soil)     -> berry_plant_from_bag
+ *     berry_read_info
+ *     if berry_ripe?   message("There are N <blue>BERRIES</blue>!", [Pick][Check][Leave])
+ *       0 Pick → berry_take + ME chime + "You picked N BERRIES!"
+ *       1 Check status → berry_read_status + status line
+ *     else (growing)   message(stage line, [Water][Add mulch][Check][Leave])
+ *       0 Water → owns a can? (watered? "moist" : "dry"+berry_water+"watered") : "no can"
+ *       1 Add mulch → has mulch? (already? "already" : berry_fertilize+"applied") : "no mulch"
+ *       2 Check status → berry_read_status + status line
+ *   else (empty soil)  message("soft loamy soil", [Plant][Leave]) → berry_plant_from_bag
  *
- * The 111/411/412 indents follow the same rule as the Conditional command
- * (markers at the opener's indent, bodies one deeper), so every generated chain
- * round-trips through the editor's normal conditional / script / text machinery.
+ * Conditional markers sit at the opener's indent, bodies one deeper, so every
+ * generated chain round-trips through the editor's normal machinery.
  */
 export const buildBerryInteractionTree = (indent: number): WorkingCommand[] => {
-  const scriptCond = (expr: string, at: number): WorkingCommand => ({ code: 111, indent: at, parameters: [12, expr] });
-  const elseAt = (at: number): WorkingCommand => ({ code: 411, indent: at, parameters: [] });
-  const endAt = (at: number): WorkingCommand => ({ code: 412, indent: at, parameters: [] });
+  const cond = (expr: string, at: number): WorkingCommand => ({ code: 111, indent: at, parameters: [12, expr] });
+  const els = (at: number): WorkingCommand => ({ code: 411, indent: at, parameters: [] });
+  const end = (at: number): WorkingCommand => ({ code: 412, indent: at, parameters: [] });
+  const csv = (row: number, at: number): WorkingCommand[] => buildTextChain(101, `\\t[${BERRY_TEXT_FILE},${row}]`, at);
+  const scr = (s: string, at: number): WorkingCommand[] => buildTextChain(355, s, at);
+  const me = (name: string, at: number): WorkingCommand => ({ code: 249, indent: at, parameters: [{ name, volume: 80, pitch: 95 }] });
+  // A CSV row fetched as a runtime string (resolves [BERRIES]/\c when shown).
+  const tg = (row: number | string): string => `text_get(${BERRY_TEXT_FILE}, ${row})`;
+  // PSDK message()+choices: shows `promptExpr` and a choice box, storing the
+  // 0-based pick in $game_variables[497]. Cancel (B) → the last option.
+  const menu = (promptExpr: string, labelRows: number[], at: number): WorkingCommand[] =>
+    scr(`$game_variables[${BERRY_MENU_VAR}] = message(${promptExpr}, ${labelRows.length}, ${labelRows.map((r) => tg(r)).join(', ')})`, at);
+  const picked = (idx: number, at: number): WorkingCommand => cond(`$game_variables[${BERRY_MENU_VAR}] == ${idx}`, at);
+  // Umbra's item_message(): shows the berry's icon + name and a CSV body row
+  // (its detail lines). No SE on a status check. berry_symbol = current berry.
+  const itemMsg = (row: number, at: number): WorkingCommand[] =>
+    scr(`item_message(berry_symbol, play_se: false, text: [${BERRY_TEXT_FILE}, ${row}])`, at);
+  // Label (118) + Jump-to-Label (119) so "Check status" returns to the menu
+  // instead of ending; the jump re-runs from the top (re-reads state + re-menus).
+  const LOOP_LABEL = 'berry_tree_menu';
+  const label = (name: string, at: number): WorkingCommand => ({ code: 118, indent: at, parameters: [name] });
+  const jump = (name: string, at: number): WorkingCommand => ({ code: 119, indent: at, parameters: [name] });
+
+  const i = indent;
   return [
-    scriptCond('berry_here?', indent),
-    scriptCond('berry_ripe?', indent + 1),
-    ...buildTextChain(101, BERRY_HARVEST_MESSAGE, indent + 2),
-    ...buildTextChain(355, BERRY_TAKE_SCRIPT, indent + 2),
-    elseAt(indent + 1),
-    ...buildTextChain(101, BERRY_GROWING_MESSAGE, indent + 2),
-    ...buildTextChain(355, BERRY_WATER_SCRIPT, indent + 2),
-    endAt(indent + 1),
-    elseAt(indent),
-    ...buildTextChain(355, BERRY_PLANT_SCRIPT, indent + 1),
-    endAt(indent),
+    label(LOOP_LABEL, i),
+    ...scr(RESET_TEXT_VARS_SCRIPT, i),
+    cond('berry_here?', i),
+    ...scr(BERRY_READ_INFO_SCRIPT, i + 1),
+    cond('berry_ripe?', i + 1),
+    // ── Ripe: message() announce + [Pick] [Check status] [Leave] ─────────
+    ...menu(tg(1), [16, 17, 18], i + 2),
+    picked(0, i + 2),
+    ...scr(BERRY_TAKE_SCRIPT, i + 3),
+    me(BERRY_HARVEST_ME, i + 3),
+    ...csv(2, i + 3),
+    els(i + 2),
+    picked(1, i + 3),
+    ...scr(BERRY_READ_STATUS_SCRIPT, i + 4),
+    ...itemMsg(14, i + 4),
+    jump(LOOP_LABEL, i + 4), // back to the menu after showing status
+    els(i + 3),
+    // index 2 = Leave → nothing
+    end(i + 3),
+    end(i + 2),
+    els(i + 1),
+    // ── Growing: message() stage line + [Water][Add mulch][Check][Leave] ─
+    ...menu(tg('3 + berry_stage'), [19, 20, 17, 18], i + 2),
+    picked(0, i + 2), // Water it — gated on owning a can
+    cond('has_watering_tool?', i + 3),
+    cond('berry_watered?', i + 4),
+    ...csv(7, i + 5),
+    els(i + 4),
+    ...csv(8, i + 5),
+    ...scr(BERRY_WATER_SCRIPT, i + 5),
+    ...csv(9, i + 5),
+    end(i + 4),
+    els(i + 3),
+    ...csv(10, i + 4),
+    end(i + 3),
+    els(i + 2),
+    picked(1, i + 3), // Add mulch — gated on having mulch
+    cond('has_fertilizer?', i + 4),
+    cond('berry_has_mulch?', i + 5),
+    ...csv(11, i + 6),
+    els(i + 5),
+    ...scr(BERRY_FERTILIZE_SCRIPT, i + 6),
+    ...csv(12, i + 6),
+    end(i + 5),
+    els(i + 4),
+    ...csv(13, i + 5),
+    end(i + 4),
+    els(i + 3),
+    picked(2, i + 4), // Check status
+    ...scr(BERRY_READ_STATUS_SCRIPT, i + 5),
+    ...itemMsg(15, i + 5),
+    jump(LOOP_LABEL, i + 5), // back to the menu after showing status
+    els(i + 4),
+    // index 3 = Leave → nothing
+    end(i + 4),
+    end(i + 3),
+    end(i + 2),
+    end(i + 1),
+    els(i),
+    // ── Empty soil: message() prompt + [Plant] [Leave] ───────────────────
+    ...menu(tg(0), [21, 18], i + 1),
+    picked(0, i + 1),
+    ...scr(BERRY_PLANT_SCRIPT, i + 2),
+    els(i + 1),
+    // index 1 = Leave → nothing
+    end(i + 1),
+    end(i),
+    // Short wait (106 waits param×2 frames) on every path so the A/B press that
+    // dismissed the menu doesn't immediately re-trigger this action-button event
+    // (which would re-show the prompt). Runs after the whole if/else closes.
+    { code: 106, indent: i, parameters: [2] },
   ];
 };
 
@@ -1574,12 +1693,16 @@ const unRubyStr = (s: string): string => s.replace(/\\'/g, "'").replace(/\\\\/g,
 const buildMoneyScript = (form: CmdForm): string =>
   `$pokemon_party.money = ${form.goldByVariable ? `$game_variables[${form.goldValue}]` : Math.max(0, form.goldValue)}`;
 // Start Trainer Battle → PSDK's start_trainer_battle. Only emit the optional
-// kwargs when they differ from the method defaults (bgm = engine default, troop
-// 3 = standard Trainer), so a plain battle stays `start_trainer_battle(id)`.
+// kwargs when they differ from the method defaults (bgm = engine default,
+// disable 'A', enable 'B', troop 3 = standard Trainer, can_lose false), so a
+// plain battle stays `start_trainer_battle(id)`.
 const buildTrainerBattleScript = (form: CmdForm): string => {
   const opts: string[] = [];
   if (form.trainerBgm !== '__undef__' && form.trainerBgm) opts.push(`bgm: ${rubyStr(form.trainerBgm)}`);
+  if (form.trainerDisable !== 'A') opts.push(`disable: ${rubyStr(form.trainerDisable)}`);
+  if (form.trainerEnable !== 'B') opts.push(`enable: ${rubyStr(form.trainerEnable)}`);
   if (form.trainerTroop !== 3) opts.push(`troop_id: ${form.trainerTroop}`);
+  if (form.trainerCanLose) opts.push('can_lose: true');
   return `start_trainer_battle(${form.trainerId}${opts.length ? `, ${opts.join(', ')}` : ''})`;
 };
 // Start Wild Battle → PSDK's call_battle_wild(:species, level[, shiny]).
@@ -1596,14 +1719,31 @@ const wildFormFromScript = (script: string): CmdForm | null => {
   return form;
 };
 
-const TRAINER_BATTLE_RE = /^start_trainer_battle\((\d+)(?:,\s*bgm:\s*'((?:[^'\\]|\\.)*)')?(?:,\s*troop_id:\s*(\d+))?\)$/;
+/** Self-switch letters an RMXP event page can use. */
+export const SELF_SWITCH_LETTERS = ['A', 'B', 'C', 'D'] as const;
+const TRAINER_BATTLE_RE = /^start_trainer_battle\((\d+)((?:,\s*\w+:\s*(?:'(?:[^'\\]|\\.)*'|\w+))*)\)$/;
+const TRAINER_KWARG_RE = /,\s*(\w+):\s*('(?:[^'\\]|\\.)*'|\w+)/g;
+// Kwargs in any order (hand-written scripts too). Anything we don't model, or a
+// switch letter outside A-D, returns null so the command stays a raw script
+// rather than being silently rewritten.
 const trainerFormFromScript = (script: string): CmdForm | null => {
   const m = script.match(TRAINER_BATTLE_RE);
   if (!m) return null;
   const form = emptyForm('trainerBattle', 'edit');
   form.trainerId = Number(m[1]);
-  if (m[2] !== undefined) form.trainerBgm = unRubyStr(m[2]);
-  if (m[3] !== undefined) form.trainerTroop = Number(m[3]);
+  const str = (v: string) => (v.startsWith("'") ? unRubyStr(v.slice(1, -1)) : null);
+  const letter = (v: string) => {
+    const l = str(v);
+    return l && (SELF_SWITCH_LETTERS as readonly string[]).includes(l) ? l : null;
+  };
+  for (const [, key, value] of m[2].matchAll(TRAINER_KWARG_RE)) {
+    if (key === 'bgm' && str(value) !== null) form.trainerBgm = str(value) as string;
+    else if (key === 'troop_id' && /^\d+$/.test(value)) form.trainerTroop = Number(value);
+    else if (key === 'disable' && letter(value)) form.trainerDisable = letter(value) as string;
+    else if (key === 'enable' && letter(value)) form.trainerEnable = letter(value) as string;
+    else if (key === 'can_lose' && (value === 'true' || value === 'false')) form.trainerCanLose = value === 'true';
+    else return null;
+  }
   return form;
 };
 

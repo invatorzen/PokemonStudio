@@ -13,6 +13,7 @@ import {
   serializeZoneTiming,
 } from '@src/custom/AmbientCries/types';
 import { defineBackendServiceFunction } from './defineBackendServiceFunction';
+import { mirrorPluginConfigs } from './pluginConfigMirror';
 
 /**
  * Read + write the Ambient Cries plugin config at
@@ -184,6 +185,7 @@ const saveAmbientCriesConfig = async (payload: SaveAmbientCriesConfigInput): Pro
     zones,
   };
   fs.writeFileSync(filePath, JSON.stringify(toWrite, null, 2));
+  mirrorPluginConfigs(payload.projectPath); // refresh .rxdata mirrors for release builds
 
   log.info('save-ambient-cries-config/success');
   return {};

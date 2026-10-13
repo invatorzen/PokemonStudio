@@ -13,7 +13,7 @@ import { BlockTitle, CheckLabel, CmdGroupTitle, DIALOG_BODY_ATTR, Dim, FormActio
 import { ScriptEditor } from './ScriptEditor';
 import { NamePicker, OnOff } from './fields';
 import { DIRECTIONS } from '../rmxpEventUtils';
-import { AUDIO_KINDS, BERRY_QUERY_SCRIPTS, BOSS_EFFECTS, canSubmitForm, clamp, emptyBossMon, emptyChoice, emptyCond, isAudioKind, STAT_KEYS, VAR_OPS, type BossConfig, type ChoiceEntry, type CmdForm, type CondEntry } from './commandModel';
+import { AUDIO_KINDS, BERRY_QUERY_SCRIPTS, BOSS_EFFECTS, canSubmitForm, clamp, emptyBossMon, emptyChoice, emptyCond, isAudioKind, SELF_SWITCH_LETTERS, STAT_KEYS, VAR_OPS, type BossConfig, type ChoiceEntry, type CmdForm, type CondEntry } from './commandModel';
 import { AudioPicker, type AudioFile } from './AudioPicker';
 import { MapTilePicker } from './MapTilePicker';
 import { PicturePicker } from './PicturePicker';
@@ -658,8 +658,30 @@ export const CommandForm = ({ form, setForm, onSubmit, onCancel, systemNames, au
               ))}
             </SmallSelect>
           </Row>
+          <Row>
+            <Dim>{t('me_events_trainer_disable')}</Dim>
+            <SmallSelect value={form.trainerDisable} onChange={(e) => setForm({ ...form, trainerDisable: e.target.value })}>
+              {SELF_SWITCH_LETTERS.map((l) => (
+                <option key={l} value={l}>{l}</option>
+              ))}
+            </SmallSelect>
+            <Dim>{t('me_events_trainer_enable')}</Dim>
+            <SmallSelect value={form.trainerEnable} onChange={(e) => setForm({ ...form, trainerEnable: e.target.value })}>
+              {SELF_SWITCH_LETTERS.map((l) => (
+                <option key={l} value={l}>{l}</option>
+              ))}
+            </SmallSelect>
+          </Row>
+          <Row>
+            <CheckLabel title={t('me_events_trainer_can_lose_hint')}>
+              <Toggle checked={form.trainerCanLose} onChange={(e) => setForm({ ...form, trainerCanLose: e.target.checked })} />
+              {t('me_events_trainer_can_lose')}
+            </CheckLabel>
+          </Row>
           <TrainerBattlePreview trainerId={form.trainerId} />
-          <Dim $wrap style={{ fontStyle: 'italic' }}>{t('me_events_trainer_hint')}</Dim>
+          <Dim $wrap style={{ fontStyle: 'italic' }}>
+            {t(form.trainerCanLose ? 'me_events_trainer_hint_can_lose' : 'me_events_trainer_hint', { disable: form.trainerDisable, enable: form.trainerEnable })}
+          </Dim>
         </>
       )}
       {form.kind === 'wildBattle' && (

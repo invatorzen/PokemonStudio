@@ -3,6 +3,7 @@ import fs from 'fs';
 import path from 'path';
 import type { SosConfig } from '@src/custom/SOS/types';
 import { defineBackendServiceFunction } from './defineBackendServiceFunction';
+import { mirrorPluginConfigs } from './pluginConfigMirror';
 
 /**
  * Read + write the cc-sos-battles bridge config at
@@ -80,6 +81,7 @@ const writeSosBattle = async (payload: WriteSosBattleInput): Promise<WriteSosBat
   // always keeps its PSDK class regardless of what the renderer sent.
   const toWrite = { ...payload.config, klass: SOS_BATTLES_KLASS };
   fs.writeFileSync(filePath, JSON.stringify(toWrite, null, 2));
+  mirrorPluginConfigs(payload.projectPath); // refresh .rxdata mirrors for release builds
 
   log.info('write-sos-battle/success');
   return {};
